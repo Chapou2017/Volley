@@ -40,6 +40,8 @@ const int BUTTON_ON = 26;       // GPIO15
 //const int BUTTON_OFF = 26;      // GPIO26
 
 // Variable pour suivre la mis en route des moteurs (via une LED)
+volatile bool motorRunning = false;  // État du moteur (true = ON, false = OFF)
+bool lastMotorState = false;         // Pour détecter les changements d'état
 volatile bool ledState = false;
 volatile bool start_flag = false;
 volatile bool stop_flag = true;
@@ -93,6 +95,29 @@ void printSpin(int percent) {
   lcd.print(percent);
   lcd.print(" %");
   lcd.setCursor(0, 0);
+}
+
+void engine_ss() {
+  if (motorRunning != lastMotorState) {
+    lcd.clear();               // Efface l'écran
+    lcd.setCursor(0, 0);       // Curseur en haut à gauche
+    if (motorRunning) {
+      lcd.print("demarrage moteurs");
+    //start_flag = !start_flag;
+    }
+    else {
+      lcd.print("Arret moteurs");      // Message d'arrêt
+    }
+    delay(1500);
+    lastMotorState = motorRunning;    // Mise à jour de l'état précédent
+    lcd.clear();
+    printSpin(spinPercent);
+    lcd.print("Vitesse [0-100]: ");
+    lcdPrintln("Retenue: ");
+    lcd.print(VITESSE);
+    lcd.print(" km/h");
+    lcd.setCursor(17, 0);    
+  }
 }
 
 void start_engine() {
@@ -230,11 +255,12 @@ void updateRegime2() {
 void IRAM_ATTR button_start() {
   unsigned long currentTime = millis();
   if (currentTime - lastInterruptTime > 300) {      // Anti-rebond : 300 ms
+    motorRunning = !motorRunning;                   // Inversion de l'état moteur
     ledState = !ledState;                           // Allumage/extinction de la LED  
     lastInterruptTime = currentTime;
     digitalWrite(LED_BUILTIN, ledState);            // Mettre à jour la LED
-    start_flag = !start_flag; 
-    stop_flag = !stop_flag; 
+    //start_flag = !start_flag; 
+    //stop_flag = !stop_flag; 
   }           
 }
 
