@@ -433,15 +433,17 @@ void loop() {
 
   engine_ss();
   spin_update();
-  rpm_pwm_calculation()
+  rpm_pwm_calculation();
 
 //================ Commande du moteur =================
   if (motorRunning) {
     ledcWrite(RPWM_CHANNEL, pwm_value);
     ledcWrite(LPWM_CHANNEL, 0);
+    Serial.println(pwm_value);
   } else {
     ledcWrite(RPWM_CHANNEL, 0);
     ledcWrite(LPWM_CHANNEL, 0);
+  }
 
 //============= gestion affichage TFT =================
 
