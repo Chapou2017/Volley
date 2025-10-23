@@ -46,8 +46,8 @@ const int pinBoutonPlus = 14;   // GPIO14
 const int pinBoutonMoins = 27;  // GPIO27
 const int BUTTON_ON = 26;       // GPIO15
 const int Led_ON = 12;          // GPIO12 pour led état bouton start/stop
-const int RPWM = 34;            // GPIO34 pour sens de rotation à droite
-const int LPWM = 35;            // GPIO35 pour sens de rotation à gauche
+const int RPWM = 25;            // GPIO34 pour sens de rotation à droite
+const int LPWM = 33;            // GPIO35 pour sens de rotation à gauche
 
 // PWM Channels
 #define RPWM_CHANNEL 0
