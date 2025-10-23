@@ -24,9 +24,17 @@ char keymap[19] = "123 456 789 *0# NF"; //N=NoKey F=Fail
 
 // Variables pour la gestion du LCD
 String inputString = "";
-int VITESSE = 0;
 byte currentRow1 = 1;
 byte currentRow2 = 1;
+
+// Variables pour la vitesse ballon
+int VITESSE = 0;                  // Vitesse de ballon souhaitée (km/h)
+const int V_MAX = 100;            // Vitesse de ballon maximum (km/h)
+const int MAX_RPM = 2500;         // Régime de rotation maximum du moteur (tr/min)
+int rpm_input = 0;                // régime de rotation moteur pour la vitesse ballon demandée
+int pwm_value = 0;                // valeur de pwm pour atteindre le régime souhaité
+
+
 
 // Gestion du delay pour l'affichage du spin
 unsigned long lastUpdate = 0;
@@ -38,7 +46,13 @@ const int pinBoutonPlus = 14;   // GPIO14
 const int pinBoutonMoins = 27;  // GPIO27
 const int BUTTON_ON = 26;       // GPIO15
 const int Led_ON = 12;          // GPIO12 pour led état bouton start/stop
-//const int BUTTON_OFF = 26;      // GPIO26
+const int RPWM = 34;            // GPIO34 pour sens de rotation à droite
+const int LPWM = 35;            // GPIO35 pour sens de rotation à gauche
+
+// PWM Channels
+#define RPWM_CHANNEL 0
+#define LPWM_CHANNEL 1
+
 
 // Variable pour suivre la mis en route des moteurs (via une LED)
 volatile bool motorRunning = false;  // État du moteur (true = ON, false = OFF)
@@ -132,6 +146,12 @@ void spin_update() {
       majAffichage = false;
     }
   }
+}
+
+void rpm_pwm_calculation() {
+  VITESSE = constrain(VITESSE, 0, V_MAX);
+  rpm_input = (VITESSE * 1000 / 60) / (0.254 * 3.14159);
+  pwm_value = map(rpm_input, 0, MAX_RPM, 0, 255);
 }
 
 // Fonction gestion écran TFT
@@ -340,6 +360,11 @@ void setup() {
   updateRegime1();
   updateRegime2();
 
+  // PWM mot1 setup
+  ledcSetup(RPWM_CHANNEL, 25000, 8); // fréquence 25kHz, 8-bit resolution
+  ledcAttachPin(RPWM, RPWM_CHANNEL);
+  ledcSetup(LPWM_CHANNEL, 25000, 8);
+  ledcAttachPin(LPWM, LPWM_CHANNEL);
 }
 
 
@@ -408,29 +433,19 @@ void loop() {
 
   engine_ss();
   spin_update();
+  rpm_pwm_calculation()
 
+//================ Commande du moteur =================
+  if (motorRunning) {
+    ledcWrite(RPWM_CHANNEL, pwm_value);
+    ledcWrite(LPWM_CHANNEL, 0);
+  } else {
+    ledcWrite(RPWM_CHANNEL, 0);
+    ledcWrite(LPWM_CHANNEL, 0);
 
-// Broches de contrôle
-//const int RPWM = 25;
-//const int LPWM = 26;
+//============= gestion affichage TFT =================
 
-//int pwmValue = 0; // Valeur PWM reçue via le port série
-
-//void setup() {
-//  Serial.begin(115200);
-//  pinMode(RPWM, OUTPUT);
-//  pinMode(LPWM, OUTPUT);
-
-// Configuration PWM
-//  ledcSetup(0, 20000, 8); // Canal 0, 20 kHz, 8 bits
-//  ledcSetup(1, 20000, 8); // Canal 1, 20 kHz, 8 bits
-
-//  ledcAttachPin(RPWM, 0);
-//  ledcAttachPin(LPWM, 1);
-
-//  Serial.println("Entrez une valeur entre 0 et 255 pour régler la vitesse du moteur.");
-  
-  if (Serial.available()) {
+    if (Serial.available()) {
     String input = Serial.readStringUntil('\n');
     input.trim();
 
