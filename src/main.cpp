@@ -36,13 +36,13 @@ const unsigned long interval = 50;
 // Pins des boutons ON, OFF et de contrôle du spin
 const int pinBoutonPlus = 14;   // GPIO14
 const int pinBoutonMoins = 27;  // GPIO27
-const int BUTTON_ON = 15;       // GPIO15
-const int BUTTON_OFF = 26;      // GPIO26
+const int BUTTON_ON = 26;       // GPIO15
+//const int BUTTON_OFF = 26;      // GPIO26
 
 // Variable pour suivre la mis en route des moteurs (via une LED)
 volatile bool ledState = false;
 volatile bool start_flag = false;
-volatile bool stop_flag = false;
+volatile bool stop_flag = true;
 volatile unsigned long lastInterruptTime = 0;
 
 // Variables pour le contrôle du spin et de son affichage
@@ -99,7 +99,7 @@ void start_engine() {
   if (start_flag == true) {
     lcd.clear();
     lcd.print("demarrage moteurs");
-    start_flag = false;
+    start_flag = !start_flag;
     delay(1500);
     lcd.clear();
     printSpin(spinPercent);
@@ -115,7 +115,7 @@ void stop_engine() {
   if (stop_flag == true) {
     lcd.clear();
     lcd.print("Arret moteurs");
-    stop_flag = false;
+    stop_flag = !stop_flag;
     delay(1500);
     lcd.clear();
     printSpin(spinPercent);
@@ -230,10 +230,11 @@ void updateRegime2() {
 void IRAM_ATTR button_start() {
   unsigned long currentTime = millis();
   if (currentTime - lastInterruptTime > 300) {      // Anti-rebond : 300 ms
-    ledState = true;                                // Allumage de la LED  
+    ledState = !ledState;                           // Allumage/extinction de la LED  
     lastInterruptTime = currentTime;
     digitalWrite(LED_BUILTIN, ledState);            // Mettre à jour la LED
-    start_flag = true;  
+    start_flag = !start_flag; 
+    stop_flag = !stop_flag; 
   }           
 }
 
@@ -294,7 +295,7 @@ void setup() {
 
   // Configuration des boutons
   pinMode(BUTTON_ON, INPUT_PULLUP);            // Résistance de pull-up activée
-  pinMode(BUTTON_OFF, INPUT_PULLUP);           // Résistance de pull-up activée
+  //pinMode(BUTTON_OFF, INPUT_PULLUP);           // Résistance de pull-up activée
   pinMode(pinBoutonPlus, INPUT_PULLUP);        // Résistance de pull-up activée
   pinMode(pinBoutonMoins, INPUT_PULLUP);       // Résistance de pull-up activée
 
@@ -315,7 +316,7 @@ void setup() {
 
   // Attachement des interruptions sur front descendant (appui bouton)
   attachInterrupt(digitalPinToInterrupt(BUTTON_ON), button_start, FALLING);
-  attachInterrupt(digitalPinToInterrupt(BUTTON_OFF), button_stop, FALLING);
+  //attachInterrupt(digitalPinToInterrupt(BUTTON_OFF), button_stop, FALLING);
   attachInterrupt(digitalPinToInterrupt(pinBoutonPlus), augmenterSpin, FALLING);
   attachInterrupt(digitalPinToInterrupt(pinBoutonMoins), diminuerSpin, FALLING);
   
