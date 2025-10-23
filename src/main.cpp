@@ -1,5 +1,10 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
+//#include <FreeSans12pt7b.h>
+//#include <FreeSans18pt7b.h>
+//#include <FreeSans24pt7b.h>
+//#include <FreeSans12pt7b.h>
+
 
 TFT_eSPI tft = TFT_eSPI();
 
