@@ -119,6 +119,21 @@ void engine_ss() {
   }
 }
 
+void spin_update() {
+  if (millis() - lastUpdate > interval) {
+    lastUpdate = millis();
+    if (majAffichage) {
+      lcd.setCursor(0, 3);
+      lcd.print("Spin :              "); // Efface ligne
+      lcd.setCursor(7, 3);
+      lcd.print(spinPercent);
+      lcd.print(" %");
+      lcd.setCursor(17, 0);
+      majAffichage = false;
+    }
+  }
+}
+
 // Fonction gestion écran TFT
 void drawThickRect(int x, int y, int w, int h, int thickness, uint16_t color) {
   for (int i = 0; i < thickness; i++) {
@@ -392,20 +407,7 @@ void loop() {
   }
 
   engine_ss();
-
-
-  if (millis() - lastUpdate > interval) {
-    lastUpdate = millis();
-    if (majAffichage) {
-      lcd.setCursor(0, 3);
-      lcd.print("Spin :              "); // Efface ligne
-      lcd.setCursor(7, 3);
-      lcd.print(spinPercent);
-      lcd.print(" %");
-      lcd.setCursor(17, 0);
-      majAffichage = false;
-    }
-  }
+  spin_update();
 
 
 // Broches de contrôle
