@@ -37,14 +37,13 @@ const unsigned long interval = 50;
 const int pinBoutonPlus = 14;   // GPIO14
 const int pinBoutonMoins = 27;  // GPIO27
 const int BUTTON_ON = 26;       // GPIO15
+const int Led_ON = 12;          // GPIO12 pour led état bouton start/stop
 //const int BUTTON_OFF = 26;      // GPIO26
 
 // Variable pour suivre la mis en route des moteurs (via une LED)
 volatile bool motorRunning = false;  // État du moteur (true = ON, false = OFF)
 bool lastMotorState = false;         // Pour détecter les changements d'état
 volatile bool ledState = false;
-volatile bool start_flag = false;
-volatile bool stop_flag = true;
 volatile unsigned long lastInterruptTime = 0;
 
 // Variables pour le contrôle du spin et de son affichage
@@ -117,38 +116,6 @@ void engine_ss() {
     lcd.print(VITESSE);
     lcd.print(" km/h");
     lcd.setCursor(17, 0);    
-  }
-}
-
-void start_engine() {
-  if (start_flag == true) {
-    lcd.clear();
-    lcd.print("demarrage moteurs");
-    start_flag = !start_flag;
-    delay(1500);
-    lcd.clear();
-    printSpin(spinPercent);
-    lcd.print("Vitesse [0-100]: ");
-    lcdPrintln("Retenue: ");
-    lcd.print(VITESSE);
-    lcd.print(" km/h");
-    lcd.setCursor(17, 0);    
-  }
-}
-
-void stop_engine() {
-  if (stop_flag == true) {
-    lcd.clear();
-    lcd.print("Arret moteurs");
-    stop_flag = !stop_flag;
-    delay(1500);
-    lcd.clear();
-    printSpin(spinPercent);
-    lcd.print("Vitesse [0-100]: ");
-    lcdPrintln("Retenue: ");
-    lcd.print(VITESSE);
-    lcd.print(" km/h");
-    lcd.setCursor(17, 0);
   }
 }
 
@@ -251,31 +218,18 @@ void updateRegime2() {
 
 //========================= Déclaration des interruptions =====================================
 
-// Fonction de démarrage des moteurs
+// Interruption de démarrage des moteurs
 void IRAM_ATTR button_start() {
   unsigned long currentTime = millis();
   if (currentTime - lastInterruptTime > 300) {      // Anti-rebond : 300 ms
     motorRunning = !motorRunning;                   // Inversion de l'état moteur
     ledState = !ledState;                           // Allumage/extinction de la LED  
     lastInterruptTime = currentTime;
-    digitalWrite(LED_BUILTIN, ledState);            // Mettre à jour la LED
-    //start_flag = !start_flag; 
-    //stop_flag = !stop_flag; 
+    digitalWrite(Led_ON, ledState);            // Mettre à jour la LED
   }           
 }
 
-// Fonction d'arrêt des moteurs
-void IRAM_ATTR button_stop() {
-  unsigned long currentTime = millis();
-  if (currentTime - lastInterruptTime > 300) {  // Anti-rebond : 300 ms
-    ledState = false;                           // Extinction de la LED  
-    lastInterruptTime = currentTime;
-    digitalWrite(LED_BUILTIN, ledState);        // Mettre à jour la LED
-    stop_flag = true; 
-  }       
-}
-
-// Fonction d'interruption pour augmenter le spin
+// Interruption pour augmenter le spin
 void IRAM_ATTR augmenterSpin() {
   unsigned long currentTime = millis();
   if (currentTime - lastInterruptTime > 300) {      // Anti-rebond : 300 ms
@@ -287,7 +241,7 @@ void IRAM_ATTR augmenterSpin() {
   }
 }
 
-// Fonction d'interruption pour diminuer le spin
+// Interruption pour diminuer le spin
 void IRAM_ATTR diminuerSpin() {
   unsigned long currentTime = millis();
   if (currentTime - lastInterruptTime > 300) {      // Anti-rebond : 300 ms
@@ -316,12 +270,11 @@ void setup() {
   Wire.setClock(400000);
 
   // Configuration de la LED bouton engine start/stop
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, LOW);               // LED éteinte au démarrage
+  pinMode(Led_ON, OUTPUT);
+  digitalWrite(Led_ON, LOW);               // LED éteinte au démarrage
 
   // Configuration des boutons
   pinMode(BUTTON_ON, INPUT_PULLUP);            // Résistance de pull-up activée
-  //pinMode(BUTTON_OFF, INPUT_PULLUP);           // Résistance de pull-up activée
   pinMode(pinBoutonPlus, INPUT_PULLUP);        // Résistance de pull-up activée
   pinMode(pinBoutonMoins, INPUT_PULLUP);       // Résistance de pull-up activée
 
@@ -342,7 +295,6 @@ void setup() {
 
   // Attachement des interruptions sur front descendant (appui bouton)
   attachInterrupt(digitalPinToInterrupt(BUTTON_ON), button_start, FALLING);
-  //attachInterrupt(digitalPinToInterrupt(BUTTON_OFF), button_stop, FALLING);
   attachInterrupt(digitalPinToInterrupt(pinBoutonPlus), augmenterSpin, FALLING);
   attachInterrupt(digitalPinToInterrupt(pinBoutonMoins), diminuerSpin, FALLING);
   
@@ -439,8 +391,8 @@ void loop() {
   delay(200);
   }
 
-  start_engine();
-  stop_engine();
+  engine_ss();
+
 
   if (millis() - lastUpdate > interval) {
     lastUpdate = millis();
