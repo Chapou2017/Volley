@@ -1,11 +1,14 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
-//#include <FreeSans12pt7b.h>
-//#include <FreeSans18pt7b.h>
-//#include <FreeSans24pt7b.h>
-//#include <FreeSans12pt7b.h>
+#include <Wire.h>
+#include <I2CKeyPad.h>
+#include <LiquidCrystal_I2C.h>
 
+// Keypad 4x3 via PCF8574
+I2CKeyPad clavier(I2C_ADDR);
+char keymap[19] = "123 456 789 *0# NF"; // N=NoKey F=Fail
 
+// TFT instance
 TFT_eSPI tft = TFT_eSPI();
 
 // Variables dynamiques
@@ -144,79 +147,6 @@ void setup() {
   updateRegime1();
   updateRegime2();
 
-  // Affichage Vitesse
-//  tft.setFreeFont(&FreeSans12pt7b);
-//  tft.setCursor(20, 80);
-//  tft.println("Vitesse de ballon");
-
-//  tft.setFreeFont(&FreeSans24pt7b);
-//  tft.setTextColor(TFT_YELLOW, TFT_BLACK);
-//  tft.setCursor(30, 150);
-//  tft.println("XXX");
-//  tft.setFreeFont(&FreeSans18pt7b);
-//  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-//  tft.setCursor(145, 150);
-//  tft.println("km/h");
-
-  // Affichage Effet ballon
-//  tft.setFreeFont(&FreeSans12pt7b);
-//  tft.setCursor(300, 80);
-//  tft.println("Effet (spin)");
-
-//  tft.setFreeFont(&FreeSans24pt7b);
-//  tft.setTextColor(TFT_GREEN, TFT_BLACK);
-//  tft.setCursor(320, 150);
-//  tft.println("XX");
-//  tft.setFreeFont(&FreeSans18pt7b);
-//  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-//  tft.setCursor(420, 150);
-//  tft.println("%");
-
-  // Affichage Tension moteur 1
-//  tft.setFreeFont(&FreeSans12pt7b);
-//  tft.setCursor(17, 210);
-//  tft.println("Tension");
-//  tft.setCursor(15, 237);
-//  tft.println("moteur 1");
-//  tft.setFreeFont(&FreeSans18pt7b);
-//  tft.setCursor(12, 290);
-//  tft.println("X.XX v");
-
-  // Affichage Tension moteur 2
-//  tft.setFreeFont(&FreeSans12pt7b);
-//  tft.setCursor(138, 210);
-//  tft.println("Tension");
-//  tft.setCursor(135, 237);
-//  tft.println("moteur 2");
-//  tft.setFreeFont(&FreeSans18pt7b);
-//  tft.setCursor(135, 290);
-//  tft.println("X.XX v");
-
-  // Affichage Régime moteur 1
-//  tft.setFreeFont(&FreeSans12pt7b);
-//  tft.setCursor(259, 210);
-//  tft.println("Regime");
-//  tft.setCursor(256, 237);
-//  tft.println("moteur 1");
-//  tft.setFreeFont(&FreeSans18pt7b);
-//  tft.setCursor(260, 279);
-//  tft.println("XXXX");
-//  tft.setFreeFont(&FreeSans12pt7b);
-//  tft.setCursor(270, 305);
-//  tft.println("tr/min");
-
-  // Affichage Régime moteur 2
-//  tft.setFreeFont(&FreeSans12pt7b);
-//  tft.setCursor(380, 210);
-//  tft.println("Regime");
-//  tft.setCursor(377, 237);
-//  tft.println("moteur 2");
-//  tft.setFreeFont(&FreeSans18pt7b);
-//  tft.setCursor(380, 279);
-//  tft.println("XXXX");
-//  tft.setFreeFont(&FreeSans12pt7b);
-//  tft.setCursor(390, 305);
-//  tft.println("tr/min");
 }
 
 void loop() {
