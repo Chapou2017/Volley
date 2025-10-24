@@ -46,12 +46,16 @@ const int pinBoutonPlus = 14;   // GPIO14
 const int pinBoutonMoins = 27;  // GPIO27
 const int BUTTON_ON = 26;       // GPIO15
 const int Led_ON = 12;          // GPIO12 pour led état bouton start/stop
-const int RPWM = 25;            // GPIO34 pour sens de rotation à droite
-const int LPWM = 33;            // GPIO35 pour sens de rotation à gauche
+const int RPWM_1 = 25;          // GPIO25 pour sens de rotation à droite moteur 1
+const int LPWM_1 = 33;          // GPIO33 pour sens de rotation à gauche moteur 1
+const int RPWM_2 = 32;          // GPIO32 pour sens de rotation à droite moteur 2
+const int LPWM_2 = 19;          // GPIO19 pour sens de rotation à gauche moteur 2
 
 // PWM Channels
-#define RPWM_CHANNEL 0
-#define LPWM_CHANNEL 1
+#define RPWM1_CHANNEL 0
+#define LPWM1_CHANNEL 1
+#define RPWM2_CHANNEL 0
+#define LPWM2_CHANNEL 1
 
 
 // Variable pour suivre la mis en route des moteurs (via une LED)
@@ -152,6 +156,18 @@ void rpm_pwm_calculation() {
   VITESSE = constrain(VITESSE, 0, V_MAX);
   rpm_input = (VITESSE * 1000 / 60) / (0.254 * 3.14159);
   pwm_value = map(rpm_input, 0, MAX_RPM, 0, 255);
+}
+
+// Fonction de commande du moteur
+void commandeMoteur1() {
+  if (motorRunning) {
+    ledcWrite(RPWM1_CHANNEL, pwm_value);
+    ledcWrite(LPWM1_CHANNEL, 0);
+    Serial.println(pwm_value);
+  } else {
+    ledcWrite(RPWM1_CHANNEL, 0);
+    ledcWrite(LPWM1_CHANNEL, 0);
+  }
 }
 
 // Fonction gestion écran TFT
@@ -302,7 +318,7 @@ void setup() {
 
   // Initialisation de la liaison I2C
   Wire.begin(); 
-  Wire.setClock(400000);
+  Wire.setClock(100000);
 
   // Configuration de la LED bouton engine start/stop
   pinMode(Led_ON, OUTPUT);
@@ -361,10 +377,10 @@ void setup() {
   updateRegime2();
 
   // PWM mot1 setup
-  ledcSetup(RPWM_CHANNEL, 25000, 8); // fréquence 25kHz, 8-bit resolution
-  ledcAttachPin(RPWM, RPWM_CHANNEL);
-  ledcSetup(LPWM_CHANNEL, 25000, 8);
-  ledcAttachPin(LPWM, LPWM_CHANNEL);
+  ledcSetup(RPWM1_CHANNEL, 25000, 8); // fréquence 25kHz, 8-bit resolution
+  ledcAttachPin(RPWM_1, RPWM1_CHANNEL);
+  ledcSetup(LPWM1_CHANNEL, 25000, 8);
+  ledcAttachPin(LPWM_1, LPWM1_CHANNEL);
 }
 
 
@@ -434,16 +450,7 @@ void loop() {
   engine_ss();
   spin_update();
   rpm_pwm_calculation();
-
-//================ Commande du moteur =================
-  if (motorRunning) {
-    ledcWrite(RPWM_CHANNEL, pwm_value);
-    ledcWrite(LPWM_CHANNEL, 0);
-    Serial.println(pwm_value);
-  } else {
-    ledcWrite(RPWM_CHANNEL, 0);
-    ledcWrite(LPWM_CHANNEL, 0);
-  }
+  commandeMoteur1();
 
 //============= gestion affichage TFT =================
 
