@@ -1,0 +1,426 @@
+#include <Arduino.h>
+#include <TFT_eSPI.h>
+#include <Wire.h>
+#include <I2CKeyPad.h>
+#include <LiquidCrystal_I2C.h>
+
+//======================== Déclaration des adresses I2C ===================================
+// Adresse I2C LCD
+LiquidCrystal_I2C lcd(0x27, 20, 4); // LCD I2C à l'adresse 0x27, écran 20 colonnes x 4 lignes
+// Adresse du PCF8574
+#define I2C_ADDR 0x20 // Adresse I2C du PCF8574 (expandeur pour le clavier)
+
+//========================= TFT instance ==================================================
+TFT_eSPI tft = TFT_eSPI(); // Instance pour l'écran TFT
+
+//========================= Déclaration des variables =====================================
+// Clavier 4x3 via PCF8574
+I2CKeyPad clavier(I2C_ADDR); // Instance du clavier matriciel I2C
+char keymap[19] = "123 456 789 *0# NF"; // Mappage des touches du clavier
+
+// Variables pour la gestion du LCD
+String inputString = ""; // Stocke la saisie utilisateur
+byte currentRow1 = 1;    // Ligne courante pour affichage LCD (fonction non utilisée)
+byte currentRow2 = 1;    // Ligne courante pour affichage LCD 20x4
+
+// Variables pour la vitesse ballon
+int VITESSE = 0;         // Vitesse de ballon souhaitée (km/h)
+const int V_MAX = 100;   // Vitesse maximale (km/h)
+const int MAX_RPM = 2500;// Régime moteur max (tr/min)
+int rpm_input = 0;       // Régime moteur calculé pour la vitesse demandée
+int pwm_value = 0;       // Valeur PWM pour atteindre le régime souhaité
+
+// Gestion du délai pour l'affichage du spin
+unsigned long lastUpdate = 0;
+const unsigned long interval = 50; // Intervalle de mise à jour (ms)
+
+// Pins des boutons ON, OFF et de contrôle du spin
+const int pinBoutonPlus = 14; // GPIO14 : bouton pour augmenter le spin
+const int pinBoutonMoins = 27;// GPIO27 : bouton pour diminuer le spin
+const int BUTTON_ON = 26;     // GPIO26 : bouton ON/OFF moteur
+const int Led_ON = 12;        // GPIO12 : LED témoin moteur
+const int RPWM = 25;          // GPIO25 : PWM sens de rotation droite
+const int LPWM = 33;          // GPIO33 : PWM sens de rotation gauche
+
+// PWM Channels
+#define RPWM_CHANNEL 0
+#define LPWM_CHANNEL 1
+
+// Variables pour suivre l'état des moteurs et de la LED
+volatile bool motorRunning = false; // Etat moteur (ON/OFF)
+bool lastMotorState = false;        // Pour détecter les changements d'état
+volatile bool ledState = false;     // Etat de la LED
+volatile unsigned long lastInterruptTime = 0; // Pour anti-rebond
+// Variables pour le contrôle du spin et de son affichage
+volatile int spinPercent = 0;       // Pourcentage de spin
+volatile bool majAffichage = false; // Flag pour mise à jour affichage spin
+const int spinMax = 50;             // Spin max
+const int spinMin = -50;            // Spin min
+// Variables dynamiques pour affichage TFT
+int vitesse = 0;
+int spin = 0;
+float tension1 = 0.0;
+float tension2 = 0.0;
+int regime1 = 0;
+int regime2 = 0;
+
+//========================= Déclaration des fonctions =====================================
+
+// Fait clignoter l'écran LCD pour confirmation
+void blinkLCD(int times = 2, int delayMs = 250) {
+  for (int i = 0; i < times; i++) {
+    lcd.noDisplay();
+    delay(delayMs);
+    lcd.display();
+    delay(delayMs);
+  }
+}
+
+// Affiche une ligne sur le LCD (non utilisée dans le code principal)
+void lcdPrintln(String text) {
+  lcd.setCursor(0, currentRow1);
+  lcd.print(text);
+}
+
+// Affiche une ligne sur le LCD 20x4, efface la ligne avant d'écrire
+void lcdPrintln_20x4(String text) {
+  lcd.setCursor(0, currentRow2);
+  lcd.print("                    "); // Efface la ligne (20 espaces)
+  lcd.setCursor(0, currentRow2);
+  lcd.print(text);
+  currentRow2++;
+  if (currentRow2 > 3) currentRow2 = 0; // Retour à la première ligne après la 4e
+}
+
+// Affiche la valeur du spin sur la 4e ligne du LCD
+void printSpin(int percent) {
+  lcd.setCursor(0, 3);
+  lcd.print("Spin: ");
+  lcd.print(percent);
+  lcd.print(" %");
+  lcd.setCursor(0, 0);
+}
+
+// Affiche le démarrage ou l'arrêt des moteurs sur le LCD
+void engine_ss() {
+  if (motorRunning != lastMotorState) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    if (motorRunning) {
+      lcd.print("demarrage moteurs");
+    } else {
+      lcd.print("Arret moteurs");
+    }
+    delay(1500);
+    lastMotorState = motorRunning;
+    lcd.clear();
+    printSpin(spinPercent);
+    lcd.print("Vitesse [0-100]: ");
+    lcdPrintln("Retenue: ");
+    lcd.print(VITESSE);
+    lcd.print(" km/h");
+    lcd.setCursor(17, 0);
+  }
+}
+
+// Met à jour l'affichage du spin sur le LCD si nécessaire
+void spin_update() {
+  if (millis() - lastUpdate > interval) {
+    lastUpdate = millis();
+    if (majAffichage) {
+      lcd.setCursor(0, 3);
+      lcd.print("Spin : ");
+      lcd.setCursor(7, 3);
+      lcd.print(spinPercent);
+      lcd.print(" %");
+      lcd.setCursor(17, 0);
+      majAffichage = false;
+    }
+  }
+}
+
+// Calcule le régime moteur et la valeur PWM en fonction de la vitesse demandée
+void rpm_pwm_calculation() {
+  VITESSE = constrain(VITESSE, 0, V_MAX);
+  rpm_input = (VITESSE * 1000 / 60) / (0.254 * 3.14159); // Conversion vitesse -> RPM
+  pwm_value = map(rpm_input, 0, MAX_RPM, 0, 255);        // Conversion RPM -> PWM (8 bits)
+}
+
+// Fonctions d'affichage sur l'écran TFT (rectangles, valeurs, etc.)
+void drawThickRect(int x, int y, int w, int h, int thickness, uint16_t color) {
+  for (int i = 0; i < thickness; i++) {
+    tft.drawRect(x + i, y + i, w - 2 * i, h - 2 * i, color);
+  }
+}
+
+void updateVitesse() {
+  tft.setFreeFont(&FreeSans12pt7b);
+  tft.setCursor(20, 80);
+  tft.println("Vitesse de ballon");
+  tft.setFreeFont(&FreeSans24pt7b);
+  tft.setTextColor(TFT_YELLOW, TFT_BLACK);
+  tft.fillRect(30, 110, 100, 50, TFT_BLACK);
+  tft.setCursor(30, 150);
+  tft.printf("%3d", vitesse);
+  tft.setFreeFont(&FreeSans18pt7b);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.setCursor(145, 150);
+  tft.println("km/h");
+}
+
+void updateSpin() {
+  tft.setFreeFont(&FreeSans12pt7b);
+  tft.setCursor(300, 80);
+  tft.println("Effet (spin)");
+  tft.setFreeFont(&FreeSans24pt7b);
+  tft.setTextColor(TFT_GREEN, TFT_BLACK);
+  tft.fillRect(320, 110, 90, 50, TFT_BLACK);
+  tft.setCursor(320, 150);
+  tft.printf("%2d", spin);
+  tft.setFreeFont(&FreeSans18pt7b);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.setCursor(420, 150);
+  tft.println("%");
+}
+
+void updateTension1() {
+  tft.setFreeFont(&FreeSans12pt7b);
+  tft.setCursor(17, 210);
+  tft.println("Tension");
+  tft.setCursor(15, 237);
+  tft.println("moteur 1");
+  tft.setFreeFont(&FreeSans18pt7b);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.fillRect(10, 260, 100, 40, TFT_BLACK);
+  tft.setCursor(12, 290);
+  tft.printf("%.2f v", tension1);
+}
+
+void updateTension2() {
+  tft.setFreeFont(&FreeSans12pt7b);
+  tft.setCursor(138, 210);
+  tft.println("Tension");
+  tft.setCursor(135, 237);
+  tft.println("moteur 2");
+  tft.setFreeFont(&FreeSans18pt7b);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.fillRect(130, 260, 100, 40, TFT_BLACK);
+  tft.setCursor(135, 290);
+  tft.printf("%.2f v", tension2);
+}
+
+void updateRegime1() {
+  tft.setFreeFont(&FreeSans12pt7b);
+  tft.setCursor(259, 210);
+  tft.println("Regime");
+  tft.setCursor(256, 237);
+  tft.println("moteur 1");
+  tft.setFreeFont(&FreeSans18pt7b);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.fillRect(255, 250, 85, 35, TFT_BLACK);
+  tft.setCursor(260, 279);
+  tft.printf("%d", regime1);
+  tft.setFreeFont(&FreeSans12pt7b);
+  tft.setCursor(270, 305);
+  tft.println("tr/min");
+}
+
+void updateRegime2() {
+  tft.setFreeFont(&FreeSans12pt7b);
+  tft.setCursor(380, 210);
+  tft.println("Regime");
+  tft.setCursor(377, 237);
+  tft.println("moteur 2");
+  tft.setFreeFont(&FreeSans18pt7b);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.fillRect(375, 250, 85, 35, TFT_BLACK);
+  tft.setCursor(380, 279);
+  tft.printf("%d", regime2);
+  tft.setFreeFont(&FreeSans12pt7b);
+  tft.setCursor(390, 305);
+  tft.println("tr/min");
+}
+
+//========================= Déclaration des interruptions =====================================
+// Interruption de démarrage des moteurs
+void IRAM_ATTR button_start() {
+  unsigned long currentTime = millis();
+  if (currentTime - lastInterruptTime > 300) { // Anti-rebond : 300 ms
+    motorRunning = !motorRunning; // Inverse l'état du moteur
+    ledState = !ledState;         // Inverse l'état de la LED
+    lastInterruptTime = currentTime;
+    digitalWrite(Led_ON, ledState); // Met à jour la LED
+  }
+}
+
+// Interruption pour augmenter le spin
+void IRAM_ATTR augmenterSpin() {
+  unsigned long currentTime = millis();
+  if (currentTime - lastInterruptTime > 300) { // Anti-rebond
+    if (spinPercent + 5 <= spinMax) {
+      spinPercent += 5;
+      majAffichage = true;
+    }
+    lastInterruptTime = currentTime;
+  }
+}
+
+// Interruption pour diminuer le spin
+void IRAM_ATTR diminuerSpin() {
+  unsigned long currentTime = millis();
+  if (currentTime - lastInterruptTime > 300) { // Anti-rebond
+    if (spinPercent - 5 >= spinMin) {
+      spinPercent -= 5;
+      majAffichage = true;
+    }
+    lastInterruptTime = currentTime;
+  }
+}
+
+//===========================================================================================================
+//========================================= SETUP ===========================================================
+void setup() {
+  Serial.begin(115200); // Initialisation du port série
+
+  // Initialisation de l'écran LCD
+  lcd.begin (20, 4);
+  lcd.init();
+  lcd.backlight();
+
+  // Initialisation de la liaison I2C
+  Wire.begin();
+  Wire.setClock(400000);
+
+  // Configuration de la LED bouton engine start/stop
+  pinMode(Led_ON, OUTPUT);
+  digitalWrite(Led_ON, LOW); // LED éteinte au démarrage
+
+  // Configuration des boutons
+  pinMode(BUTTON_ON, INPUT_PULLUP);      // Résistance de pull-up activée
+  pinMode(pinBoutonPlus, INPUT_PULLUP);  // Résistance de pull-up activée
+  pinMode(pinBoutonMoins, INPUT_PULLUP); // Résistance de pull-up activée
+
+  // Initialisation du clavier numérique
+  if (clavier.begin() == false){
+    Serial.println("Cannot communicate with keypad. Please check");
+    while (1); // Stoppe le programme si le clavier n'est pas détecté
+  }
+  clavier.loadKeyMap(keymap);
+
+  // Affichage initial sur le LCD
+  printSpin(spinPercent);
+  lcd.setCursor(0, 0);
+  Serial.println("Entrez une vitesse entre 0 et 100 km/h, puis appuyez sur #");
+  lcd.print("Vitesse [0-100]: ");
+
+  // Attachement des interruptions sur front descendant (appui bouton)
+  attachInterrupt(digitalPinToInterrupt(BUTTON_ON), button_start, FALLING);
+  attachInterrupt(digitalPinToInterrupt(pinBoutonPlus), augmenterSpin, FALLING);
+  attachInterrupt(digitalPinToInterrupt(pinBoutonMoins), diminuerSpin, FALLING);
+
+  //============================ Setup écran TFT ============================
+  tft.init();
+  tft.setRotation(1);
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+
+  // Dessin des rectangles (X, Y, largeur, hauteur, épaisseur)
+  drawThickRect(0, 50, 239, 130, 3, TFT_YELLOW);      // Rectangle "Vitesse ballon"
+  drawThickRect(241, 50, 238, 130, 3, TFT_GREEN);      // Rectangle "% Spin"
+  drawThickRect(0, 182, 118, 132, 2, TFT_LIGHTGREY);   // Rectangle "Tension moteur 1"
+  drawThickRect(120, 182, 119, 132, 2, TFT_LIGHTGREY); // Rectangle "Tension moteur 2"
+  drawThickRect(241, 182, 119, 132, 2, TFT_RED);       // Rectangle "Régime moteur 1"
+  drawThickRect(362, 182, 118, 132, 2, TFT_RED);       // Rectangle "Régime moteur 2"
+
+  // Titre
+  tft.setFreeFont(&FreeSans12pt7b);
+  tft.setCursor(155, 30);
+  tft.println("Reglages actuels");
+
+  // Affichage initial des valeurs
+  updateVitesse();
+  updateSpin();
+  updateTension1();
+  updateTension2();
+  updateRegime1();
+  updateRegime2();
+
+  // PWM moteurs setup
+  ledcSetup(RPWM_CHANNEL, 25000, 8); // fréquence 25kHz, 8 bits
+  ledcAttachPin(RPWM, RPWM_CHANNEL);
+  ledcSetup(LPWM_CHANNEL, 25000, 8);
+  ledcAttachPin(LPWM, LPWM_CHANNEL);
+}
+
+//===========================================================================================================
+//========================================== LOOP ===========================================================
+void loop() {
+  char key = clavier.getChar();
+  if (key != 0) { // Si une touche est pressée
+    if (key >= '0' && key <= '9') {
+      inputString += key;
+      Serial.print(key);
+      lcd.print(key);
+    }
+    else if (key == '#') { // Validation de la saisie
+      int temp = inputString.toInt();
+      if (temp >= 0 && temp <= 100) {
+        VITESSE = temp;
+        Serial.println();
+        Serial.print("VITESSE enregistrée : ");
+        Serial.println(VITESSE);
+        lcd.clear();
+        lcd.print("Vitesse [0-100]: ");
+        lcdPrintln("Retenue: ");
+        lcd.print(VITESSE);
+        lcd.print(" km/h");
+        blinkLCD(); // Clignotement pour confirmation
+        printSpin(spinPercent);
+        lcd.setCursor(17, 0);
+      }
+      else { // Valeur invalide
+        Serial.println();
+        Serial.println("Valeur invalide. Entrez une vitesse entre 0 et 100.");
+        lcd.clear();
+        lcd.print("Vitesse invalide");
+        delay(1500);
+        lcd.clear();
+        printSpin(spinPercent);
+        lcd.print("Vitesse [0-100]: ");
+        lcdPrintln("Retenue: ");
+        lcd.print(VITESSE);
+        lcd.print(" km/h");
+        lcd.setCursor(17, 0);
+      }
+      inputString = "";
+    }
+    else if (key == '*') { // Réinitialisation de la saisie
+      inputString = "";
+      Serial.println();
+      Serial.println("Entrée réinitialisée.");
+      lcd.clear();
+      lcd.print("Reinitialisation");
+      delay(1500);
+      lcd.clear();
+      printSpin(spinPercent);
+      lcd.print("Vitesse [0-100]: ");
+      lcdPrintln("Retenue: ");
+      lcd.print(VITESSE);
+      lcd.print(" km/h");
+      lcd.setCursor(17, 0);
+    }
+    delay(200); // Anti-rebond clavier
+  }
+
+  engine_ss();         // Affichage état moteur
+  spin_update();       // Mise à jour affichage spin
+  rpm_pwm_calculation(); // Calcul PWM moteur
+
+  //================ Commande du moteur =================
+  if (motorRunning) {
+    ledcWrite(RPWM_CHANNEL, pwm_value);
+    ledcWrite(LPWM_CHANNEL, 0);
+    Serial.println(pwm_value);
+  } else {
+    ledcWrite(RPWM_CHANNEL, 0);
+   
