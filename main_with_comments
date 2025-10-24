@@ -146,6 +146,18 @@ void rpm_pwm_calculation() {
   pwm_value = map(rpm_input, 0, MAX_RPM, 0, 255);        // Conversion RPM -> PWM (8 bits)
 }
 
+// Fonction de commande du moteur
+void commandeMoteur1() {
+  if (motorRunning) {
+    ledcWrite(RPWM_CHANNEL, pwm_value);
+    ledcWrite(LPWM_CHANNEL, 0);
+    Serial.println(pwm_value);
+  } else {
+    ledcWrite(RPWM_CHANNEL, 0);
+    ledcWrite(LPWM_CHANNEL, 0);
+  }
+}
+
 // Fonctions d'affichage sur l'écran TFT (rectangles, valeurs, etc.)
 void drawThickRect(int x, int y, int w, int h, int thickness, uint16_t color) {
   for (int i = 0; i < thickness; i++) {
@@ -416,11 +428,34 @@ void loop() {
   spin_update();       // Mise à jour affichage spin
   rpm_pwm_calculation(); // Calcul PWM moteur
 
-  //================ Commande du moteur =================
-  if (motorRunning) {
-    ledcWrite(RPWM_CHANNEL, pwm_value);
-    ledcWrite(LPWM_CHANNEL, 0);
-    Serial.println(pwm_value);
-  } else {
-    ledcWrite(RPWM_CHANNEL, 0);
-   
+//================ Commande du moteur =================
+  commandeMoteur1();
+//============= gestion affichage TFT =================
+
+    if (Serial.available()) {
+    String input = Serial.readStringUntil('\n');
+    input.trim();
+
+    if (input.startsWith("V=")) {
+      vitesse = input.substring(2).toInt();
+      updateVitesse();
+    } else if (input.startsWith("S=")) {
+      spin = input.substring(2).toInt();
+      updateSpin();
+    } else if (input.startsWith("T1=")) {
+      tension1 = input.substring(3).toFloat();
+      updateTension1();
+    } else if (input.startsWith("T2=")) {
+      tension2 = input.substring(3).toFloat();
+      updateTension2();
+    } else if (input.startsWith("R1=")) {
+      regime1 = input.substring(3).toInt();
+      updateRegime1();
+    } else if (input.startsWith("R2=")) {
+      regime2 = input.substring(3).toInt();
+      updateRegime2();
+    }
+  }
+}
+
+
