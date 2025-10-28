@@ -34,12 +34,9 @@ const int MAX_RPM = 2500;         // Régime de rotation maximum du moteur (tr/m
 int rpm_input = 0;                // régime de rotation moteur pour la vitesse ballon demandée
 int pwm_value = 0;                // valeur de pwm pour atteindre le régime souhaité
 
-
-
 // Gestion du delay pour l'affichage du spin
 unsigned long lastUpdate = 0;
 const unsigned long interval = 50;
-
 
 // Pins des boutons ON, OFF et de contrôle du spin
 const int pinBoutonPlus = 14;   // GPIO14
@@ -82,6 +79,23 @@ float tension1 = 0.0;
 float tension2 = 0.0;
 int regime1 = 0;
 int regime2 = 0;
+
+// Variables de mesure de tension
+// Broche analogique
+const int analogPinV1 = 33;
+const int analogPinV2 = 32;
+const int analogPinV3 = 35;
+// Variables
+int rawValue_1 = 0;
+int rawValue_2 = 0;
+int rawValue_3 = 0;
+float tension_moteur_1 = 0.00;
+float tension_moteur_2 = 0.00;
+float tension_alimentation = 0.00;
+// Résistances du pont diviseur
+const float R1 = 30000.0;
+const float R2 = 7500.0;
+
 
 //========================= Déclaration des fonctions =====================================
 
@@ -272,6 +286,30 @@ void updateRegime2() {
   tft.println("tr/min");
 }
 
+// fonction de mesure de tension
+void mesure_tension() {
+  rawValue_1 = analogRead(analogPinV1);
+  rawValue_2 = analogRead(analogPinV2);
+  rawValue_3 = analogRead(analogPinV3);
+  tension_moteur_1 = MesureTension(rawValue_1);
+  tension_moteur_2 = MesureTension(rawValue_2);
+  tension_alimentation = MesureTension(rawValue_3);
+}
+
+// fonction de correction de mesure de tension
+float corrigerTension(float tension_lue) {
+  return 1.016 * tension_lue + 0.72;
+}
+
+// Fonction de calcul de tension
+float MesureTension(int voltage) {
+  float tension_mesure = (voltage / 4095.0) * 3.3;
+  float tension_reelle = tension_mesure * ((R1 + R2) / R2);
+  tension_reelle = corrigerTension(tension_reelle);
+  return tension_reelle;
+}
+
+
 //========================= Déclaration des interruptions =====================================
 
 // Interruption de démarrage des moteurs
@@ -315,6 +353,7 @@ void IRAM_ATTR diminuerSpin() {
 
 void setup() {
   Serial.begin(115200);
+  analogReadResolution(12);
 
   // Initialisation de l'écran LCD
   lcd.begin (20, 4);
@@ -464,6 +503,7 @@ void loop() {
   spin_update();
   rpm_pwm_calculation();
   commandeMoteur1();
+  mesure_tension();
 
 //============= gestion affichage TFT =================
 
