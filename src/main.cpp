@@ -70,6 +70,11 @@ volatile bool majAffichage = false;
 const int spinMax = 50;
 const int spinMin = -50;
 
+// Variables pour la gestion anti-rebond du clavier
+unsigned long lastKeyPressTime = 0;
+const unsigned long keyDebounceDelay = 200;  // Délai anti-rebond en millisecondes
+char lastKey = 0;  // Dernière touche pressée
+
 // Variables dynamiques - affichage sur TFT
 int vitesse = 0;
 int spin = 0;
@@ -390,63 +395,72 @@ void setup() {
 void loop() {
 
   char key = clavier.getChar();
-  if (key != 0) { // Si une touche est pressée (key différente de "null")
-    if (key >= '0' && key <= '9') {
-      inputString += key;
-      Serial.print(key);
-      lcd.print(key);
-    } 
-    else if (key == '#') {
-      int temp = inputString.toInt();
-      if (temp >= 0 && temp <= 100) {
-        VITESSE = temp;
-        Serial.println();
-        Serial.print("VITESSE enregistrée : ");
-        Serial.println(VITESSE);
-        lcd.clear();
 
-        lcd.print("Vitesse [0-100]: ");
-        lcdPrintln("Retenue: ");
-        lcd.print(VITESSE);
-        lcd.print(" km/h");
-        blinkLCD(); // Clignotement pour confirmation
-        printSpin(spinPercent);
-        lcd.setCursor(17, 0);
-        } 
-      else {
+  // Gestion anti-rebond du clavier
+  if (key != 0) { // Si une touche est pressée (key différente de "null")
+
+    // Vérifier si assez de temps s'est écoulé depuis la dernière pression
+    // ET si c'est une touche différente de la précédente
+    if ((currentTime - lastKeyPressTime > keyDebounceDelay) || (key != lastKey)) {
+      lastKeyPressTime = currentTime;
+      lastKey = key;
+  
+      if (key >= '0' && key <= '9') {
+        inputString += key;
+        Serial.print(key);
+        lcd.print(key);
+      } 
+      else if (key == '#') {
+        int temp = inputString.toInt();
+        if (temp >= 0 && temp <= 100) {
+          VITESSE = temp;
+          Serial.println();
+          Serial.print("VITESSE enregistrée : ");
+          Serial.println(VITESSE);
+          lcd.clear();
+  
+          lcd.print("Vitesse [0-100]: ");
+          lcdPrintln("Retenue: ");
+          lcd.print(VITESSE);
+          lcd.print(" km/h");
+          blinkLCD(); // Clignotement pour confirmation
+          printSpin(spinPercent);
+          lcd.setCursor(17, 0);
+          } 
+        else {
+          Serial.println();
+          Serial.println("Valeur invalide. Entrez une vitesse entre 0 et 100.");
+          lcd.clear();
+          lcd.print("Vitesse invalide");
+          delay(1500);
+          lcd.clear();
+          printSpin(spinPercent);
+          lcd.print("Vitesse [0-100]: ");
+          lcdPrintln("Retenue: ");
+          lcd.print(VITESSE);
+          lcd.print(" km/h");
+          lcd.setCursor(17, 0);
+          }
+        inputString = "";
+      }
+      else if (key == '*') {
+        inputString = "";
         Serial.println();
-        Serial.println("Valeur invalide. Entrez une vitesse entre 0 et 100.");
+        Serial.println("Entrée réinitialisée.");
         lcd.clear();
-        lcd.print("Vitesse invalide");
+        lcd.print("Reinitialisation");
         delay(1500);
         lcd.clear();
         printSpin(spinPercent);
         lcd.print("Vitesse [0-100]: ");
         lcdPrintln("Retenue: ");
-        lcd.print(VITESSE);
-        lcd.print(" km/h");
-        lcd.setCursor(17, 0);
-        }
-      inputString = "";
+          lcd.print(VITESSE);
+          lcd.print(" km/h");
+          lcd.setCursor(17, 0);
+      }
+    //  delay(200);
     }
-    else if (key == '*') {
-      inputString = "";
-      Serial.println();
-      Serial.println("Entrée réinitialisée.");
-      lcd.clear();
-      lcd.print("Reinitialisation");
-      delay(1500);
-      lcd.clear();
-      printSpin(spinPercent);
-      lcd.print("Vitesse [0-100]: ");
-      lcdPrintln("Retenue: ");
-        lcd.print(VITESSE);
-        lcd.print(" km/h");
-        lcd.setCursor(17, 0);
-    }
-  delay(200);
   }
-
   engine_ss();
   spin_update();
   rpm_pwm_calculation();
