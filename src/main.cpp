@@ -361,19 +361,6 @@ void mesure_tension() {
   tension_alimentation = ALPHA_FILTRE * nouvelle_tension_alim + (1.0 - ALPHA_FILTRE) * tension_alimentation;
 }
 
-
-
-// fonction de mesure de tension
-//void mesure_tension() {
-//  rawValue_1 = analogRead(analogPinV1);
-//  rawValue_2 = analogRead(analogPinV2);
-//  rawValue_3 = analogRead(analogPinV3);
-//  tension_moteur_1 = MesureTension(rawValue_1);
-//  tension_moteur_2 = MesureTension(rawValue_2);
-//  tension_alimentation = MesureTension(rawValue_3);
-//}
-
-
 //========================= Déclaration des interruptions =====================================
 
 // Interruption de démarrage des moteurs
