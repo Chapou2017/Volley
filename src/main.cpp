@@ -357,6 +357,24 @@ float MesureCourant(int rawValue) {
   return abs(courant);
 }
 
+
+// Fonction de calibration du point zéro (à appeler sans courant dans le moteur)
+float calibrerPointZero(int pin) {
+  long somme = 0;
+  for (int i = 0; i < 200; i++) {
+    somme += analogRead(pin);
+    delay(5);
+  }
+  int rawAverage = somme / 200;
+  float voltageZero = (rawAverage / 4095.0) * 3.3;
+  Serial.print("Calibration capteur sur GPIO");
+  Serial.print(pin);
+  Serial.print(" : Point zero = ");
+  Serial.print(voltageZero);
+  Serial.println("V");
+  return voltageZero;
+}
+
 // Fonction de mesure analogique avec moyenne (oversampling)
 int mesureAnalogAvecMoyenne(int pin) {
   long somme = 0;
@@ -517,6 +535,14 @@ void setup() {
   ledcAttachPin(RPWM_1, RPWM1_CHANNEL);
   ledcSetup(LPWM1_CHANNEL, 25000, 8);
   ledcAttachPin(LPWM_1, LPWM1_CHANNEL);
+
+  // Calibration des capteurs de courant (décommenter pour calibrer, moteurs à l'arrêt)
+   delay(2000);
+   Serial.println("=== CALIBRATION CAPTEURS COURANT ===");
+   float zero1 = calibrerPointZero(analogPinI1);
+   float zero2 = calibrerPointZero(analogPinI2);
+   Serial.println("Utilisez ces valeurs pour ACS712_ZERO_CURRENT");
+
 }
 
 
