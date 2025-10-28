@@ -117,7 +117,7 @@ int rawValueI1 = 0;
 int rawValueI2 = 0;
 // Constantes ACS712-20A
 const float ACS712_SENSITIVITY = 0.100;  // 100 mV/A pour le modèle 20A
-const float ACS712_ZERO_CURRENT = 1.65;   // Point milieu à 1.65V pour alimentation 3.3V (3.3V/2) pat un ESP32
+const float ACS712_ZERO_CURRENT = 1.43;   // Point milieu à 1.65V pour alimentation 3.3V (3.3V/2) pour un ESP32, 1.43V sur le GPIO35 après calibration
 
 // Paramètres de filtrage pour stabiliser la mesure
 const int NB_ECHANTILLONS = 100;  // Nombre d'échantillons pour la moyenne
@@ -537,11 +537,11 @@ void setup() {
   ledcAttachPin(LPWM_1, LPWM1_CHANNEL);
 
   // Calibration des capteurs de courant (décommenter pour calibrer, moteurs à l'arrêt)
-   delay(2000);
-   Serial.println("=== CALIBRATION CAPTEURS COURANT ===");
-   float zero1 = calibrerPointZero(analogPinI1);
-   float zero2 = calibrerPointZero(analogPinI2);
-   Serial.println("Utilisez ces valeurs pour ACS712_ZERO_CURRENT");
+  // delay(2000);
+  // Serial.println("=== CALIBRATION CAPTEURS COURANT ===");
+  // float zero1 = calibrerPointZero(analogPinI1);
+  // float zero2 = calibrerPointZero(analogPinI2);
+  // Serial.println("Utilisez ces valeurs pour ACS712_ZERO_CURRENT");
 
 }
 
