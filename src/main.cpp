@@ -97,7 +97,9 @@ float tension_alimentation = 0.00;
 // Résistances du pont diviseur
 const float R1 = 30000.0;
 const float R2 = 7500.0;
-
+// Paramètres de filtrage pour stabiliser la mesure
+const int NB_ECHANTILLONS = 20;  // Nombre d'échantillons pour la moyenne
+const float ALPHA_FILTRE = 0.2;   // Coefficient du filtre passe-bas (0.1 à 0.3 recommandé)
 
 //========================= Déclaration des fonctions =====================================
 
@@ -280,7 +282,6 @@ void updateCourant2() {
   tft.fillRect(375, 250, 85, 35, TFT_BLACK);
   tft.setCursor(376, 290);
   tft.printf("%.1f  A", courant2);
-
 }
 
 // fonction de correction de mesure de tension
@@ -296,15 +297,46 @@ float MesureTension(int voltage) {
   return tension_reelle;
 }
 
-// fonction de mesure de tension
-void mesure_tension() {
-  rawValue_1 = analogRead(analogPinV1);
-  rawValue_2 = analogRead(analogPinV2);
-  rawValue_3 = analogRead(analogPinV3);
-  tension_moteur_1 = MesureTension(rawValue_1);
-  tension_moteur_2 = MesureTension(rawValue_2);
-  tension_alimentation = MesureTension(rawValue_3);
+// Fonction de mesure analogique avec moyenne (oversampling)
+int mesureAnalogAvecMoyenne(int pin) {
+  long somme = 0;
+  for (int i = 0; i < NB_ECHANTILLONS; i++) {
+    somme += analogRead(pin);
+    delayMicroseconds(100);  // Petit délai entre les mesures
+  }
+  return somme / NB_ECHANTILLONS;
 }
+
+// fonction de mesure de tension avec filtrage
+void mesure_tension() {
+  // Mesure avec moyenne de plusieurs échantillons
+  rawValue_1 = mesureAnalogAvecMoyenne(analogPinV1);
+  rawValue_2 = mesureAnalogAvecMoyenne(analogPinV2);
+  rawValue_3 = mesureAnalogAvecMoyenne(analogPinV3);
+  
+  // Calcul de la nouvelle tension
+  float nouvelle_tension_1 = MesureTension(rawValue_1);
+  float nouvelle_tension_2 = MesureTension(rawValue_2);
+  float nouvelle_tension_alim = MesureTension(rawValue_3);
+  
+  // Application d'un filtre passe-bas (lissage exponentiel)
+  // Formule: valeur_filtrée = alpha * nouvelle_valeur + (1 - alpha) * ancienne_valeur
+  tension_moteur_1 = ALPHA_FILTRE * nouvelle_tension_1 + (1.0 - ALPHA_FILTRE) * tension_moteur_1;
+  tension_moteur_2 = ALPHA_FILTRE * nouvelle_tension_2 + (1.0 - ALPHA_FILTRE) * tension_moteur_2;
+  tension_alimentation = ALPHA_FILTRE * nouvelle_tension_alim + (1.0 - ALPHA_FILTRE) * tension_alimentation;
+}
+
+
+
+// fonction de mesure de tension
+//void mesure_tension() {
+//  rawValue_1 = analogRead(analogPinV1);
+//  rawValue_2 = analogRead(analogPinV2);
+//  rawValue_3 = analogRead(analogPinV3);
+//  tension_moteur_1 = MesureTension(rawValue_1);
+//  tension_moteur_2 = MesureTension(rawValue_2);
+//  tension_alimentation = MesureTension(rawValue_3);
+//}
 
 
 //========================= Déclaration des interruptions =====================================
