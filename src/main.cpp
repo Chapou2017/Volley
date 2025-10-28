@@ -77,6 +77,8 @@ int vitesse = 0;
 int spin = 0;
 float tension1 = 0.0;
 float tension2 = 0.0;
+float courant1 = 0.0;
+float courant2 = 0.0;
 int regime1 = 0;
 int regime2 = 0;
 
@@ -237,63 +239,48 @@ void updateTension1() {
   tft.setFreeFont(&FreeSans18pt7b);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.fillRect(10, 260, 100, 40, TFT_BLACK);
-  tft.setCursor(12, 290);
-  tft.printf("%.2f v", tension1);
+  tft.setCursor(15, 290);
+  tft.printf("%.1f  v", tension_moteur_1);
 }
 
-void updateTension2() {
+void updateCourant1() {
   tft.setFreeFont(&FreeSans12pt7b);
-  tft.setCursor(138, 210);
-  tft.println("Tension");
+  tft.setCursor(137, 210);
+  tft.println("Courant");
   tft.setCursor(135, 237);
-  tft.println("moteur 2");
+  tft.println("moteur 1");
   tft.setFreeFont(&FreeSans18pt7b);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.fillRect(130, 260, 100, 40, TFT_BLACK);
   tft.setCursor(135, 290);
-  tft.printf("%.2f v", tension2);
+  tft.printf("%.1f  A", tension2);
 }
 
-void updateRegime1() {
+void updateTension2() {
   tft.setFreeFont(&FreeSans12pt7b);
   tft.setCursor(259, 210);
-  tft.println("Regime");
+  tft.println("Tension");
   tft.setCursor(256, 237);
-  tft.println("moteur 1");
+  tft.println("moteur 2");
   tft.setFreeFont(&FreeSans18pt7b);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.fillRect(255, 250, 85, 35, TFT_BLACK);
-  tft.setCursor(260, 279);
-  tft.printf("%d", regime1);
-  tft.setFreeFont(&FreeSans12pt7b);
-  tft.setCursor(270, 305);
-  tft.println("tr/min");
+  tft.setCursor(260, 290);
+  tft.printf("%.1f  v", tension2);
 }
 
-void updateRegime2() {
+void updateCourant2() {
   tft.setFreeFont(&FreeSans12pt7b);
   tft.setCursor(380, 210);
-  tft.println("Regime");
+  tft.println("Courant");
   tft.setCursor(377, 237);
   tft.println("moteur 2");
   tft.setFreeFont(&FreeSans18pt7b);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.fillRect(375, 250, 85, 35, TFT_BLACK);
-  tft.setCursor(380, 279);
-  tft.printf("%d", regime2);
-  tft.setFreeFont(&FreeSans12pt7b);
-  tft.setCursor(390, 305);
-  tft.println("tr/min");
-}
+  tft.setCursor(376, 290);
+  tft.printf("%.1f  A", courant2);
 
-// fonction de mesure de tension
-void mesure_tension() {
-  rawValue_1 = analogRead(analogPinV1);
-  rawValue_2 = analogRead(analogPinV2);
-  rawValue_3 = analogRead(analogPinV3);
-  tension_moteur_1 = MesureTension(rawValue_1);
-  tension_moteur_2 = MesureTension(rawValue_2);
-  tension_alimentation = MesureTension(rawValue_3);
 }
 
 // fonction de correction de mesure de tension
@@ -307,6 +294,16 @@ float MesureTension(int voltage) {
   float tension_reelle = tension_mesure * ((R1 + R2) / R2);
   tension_reelle = corrigerTension(tension_reelle);
   return tension_reelle;
+}
+
+// fonction de mesure de tension
+void mesure_tension() {
+  rawValue_1 = analogRead(analogPinV1);
+  rawValue_2 = analogRead(analogPinV2);
+  rawValue_3 = analogRead(analogPinV3);
+  tension_moteur_1 = MesureTension(rawValue_1);
+  tension_moteur_2 = MesureTension(rawValue_2);
+  tension_alimentation = MesureTension(rawValue_3);
 }
 
 
@@ -417,8 +414,8 @@ void setup() {
   updateSpin();
   updateTension1();
   updateTension2();
-  updateRegime1();
-  updateRegime2();
+  updateCourant1();
+  updateCourant2();
 
   // PWM mot1 setup
   ledcSetup(RPWM1_CHANNEL, 25000, 8); // fréquence 25kHz, 8-bit resolution
@@ -505,31 +502,12 @@ void loop() {
   commandeMoteur1();
   mesure_tension();
 
-//============= gestion affichage TFT =================
-
-    if (Serial.available()) {
-    String input = Serial.readStringUntil('\n');
-    input.trim();
-
-    if (input.startsWith("V=")) {
-      vitesse = input.substring(2).toInt();
-      updateVitesse();
-    } else if (input.startsWith("S=")) {
-      spin = input.substring(2).toInt();
-      updateSpin();
-    } else if (input.startsWith("T1=")) {
-      tension1 = input.substring(3).toFloat();
-      updateTension1();
-    } else if (input.startsWith("T2=")) {
-      tension2 = input.substring(3).toFloat();
-      updateTension2();
-    } else if (input.startsWith("R1=")) {
-      regime1 = input.substring(3).toInt();
-      updateRegime1();
-    } else if (input.startsWith("R2=")) {
-      regime2 = input.substring(3).toInt();
-      updateRegime2();
-    }
-  }
+  // Mise à jour des variables de fonctionnement
+  updateVitesse();
+  updateSpin();
+  updateTension1();
+  updateTension2();
+  updateCourant1();
+  updateCourant2();
 }
 
