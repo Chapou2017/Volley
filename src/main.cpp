@@ -82,6 +82,16 @@ float courant2 = 0.0;
 int regime1 = 0;
 int regime2 = 0;
 
+// Variables pour détecter les changements d'affichage
+int vitesse_prev = -1;
+int spin_prev = -999;
+float tension_moteur_1_prev = -1.0;
+float tension_moteur_2_prev = -1.0;
+float courant1_prev = -1.0;
+float courant2_prev = -1.0;
+int regime1_prev = -1;
+int regime2_prev = -1;
+
 // Variables de mesure de tension
 // Broche analogique
 const int analogPinV1 = 34;
@@ -98,7 +108,7 @@ float tension_alimentation = 0.00;
 const float R1 = 30000.0;
 const float R2 = 7500.0;
 // Paramètres de filtrage pour stabiliser la mesure
-const int NB_ECHANTILLONS = 20;  // Nombre d'échantillons pour la moyenne
+const int NB_ECHANTILLONS = 100;  // Nombre d'échantillons pour la moyenne
 const float ALPHA_FILTRE = 0.2;   // Coefficient du filtre passe-bas (0.1 à 0.3 recommandé)
 
 //========================= Déclaration des fonctions =====================================
@@ -201,19 +211,23 @@ void drawThickRect(int x, int y, int w, int h, int thickness, uint16_t color) {
 }
 
 void updateVitesse() {
-  tft.setFreeFont(&FreeSans12pt7b);
-  tft.setCursor(20, 80);
-  tft.println("Vitesse de ballon");
-  
-  tft.setFreeFont(&FreeSans24pt7b);
-  tft.setTextColor(TFT_YELLOW, TFT_BLACK);
-  tft.fillRect(30, 110, 100, 50, TFT_BLACK);
-  tft.setCursor(30, 150);
-  tft.printf("%3d", vitesse);
-  tft.setFreeFont(&FreeSans18pt7b);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.setCursor(145, 150);
-  tft.println("km/h");
+  // Ne mettre à jour que si la valeur a changé
+  if (vitesse != vitesse_prev) {
+    tft.setFreeFont(&FreeSans12pt7b);
+    tft.setCursor(20, 80);
+    tft.println("Vitesse de ballon");
+    
+    tft.setFreeFont(&FreeSans24pt7b);
+    tft.setTextColor(TFT_YELLOW, TFT_BLACK);
+    tft.fillRect(30, 110, 100, 50, TFT_BLACK);
+    tft.setCursor(30, 150);
+    tft.printf("%3d", vitesse);
+    tft.setFreeFont(&FreeSans18pt7b);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.setCursor(145, 150);
+    tft.println("km/h");
+    vitesse_prev = vitesse;
+  }
 }
 
 void updateSpin() {
@@ -233,16 +247,20 @@ void updateSpin() {
 }
 
 void updateTension1() {
-  tft.setFreeFont(&FreeSans12pt7b);
-  tft.setCursor(17, 210);
-  tft.println("Tension");
-  tft.setCursor(15, 237);
-  tft.println("moteur 1");
-  tft.setFreeFont(&FreeSans18pt7b);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.fillRect(10, 260, 100, 40, TFT_BLACK);
-  tft.setCursor(15, 290);
-  tft.printf("%.1f  v", tension_moteur_1);
+  // Ne mettre à jour que si la valeur a changé (avec seuil de 0.1V pour éviter les micro-variations)
+  if (abs(tension_moteur_1 - tension_moteur_1_prev) > 0.05) {
+    tft.setFreeFont(&FreeSans12pt7b);
+    tft.setCursor(17, 210);
+    tft.println("Tension");
+    tft.setCursor(15, 237);
+    tft.println("moteur 1");
+    tft.setFreeFont(&FreeSans18pt7b);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.fillRect(10, 260, 100, 40, TFT_BLACK);
+    tft.setCursor(15, 290);
+    tft.printf("%.1f  v", tension_moteur_1);
+    tension_moteur_1_prev = tension_moteur_1;
+  }
 }
 
 void updateCourant1() {
@@ -302,7 +320,7 @@ int mesureAnalogAvecMoyenne(int pin) {
   long somme = 0;
   for (int i = 0; i < NB_ECHANTILLONS; i++) {
     somme += analogRead(pin);
-    delayMicroseconds(100);  // Petit délai entre les mesures
+    delayMicroseconds(200);  // Délai entre les mesures pour couvrir plusieurs cycles PWM
   }
   return somme / NB_ECHANTILLONS;
 }
