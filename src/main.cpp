@@ -306,8 +306,8 @@ void updateTension2() {
     tft.println("moteur 2");
     tft.setFreeFont(&FreeSans18pt7b);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.fillRect(255, 250, 85, 35, TFT_BLACK);
-    tft.setCursor(260, 290);
+    tft.fillRect(250, 260, 100, 40, TFT_BLACK);
+    tft.setCursor(255, 290);
     tft.printf("%.1f  v", tension_moteur_2);
     tension_moteur_2_prev = tension_moteur_2;
   }
@@ -323,8 +323,8 @@ void updateCourant2() {
     tft.println("moteur 2");
     tft.setFreeFont(&FreeSans18pt7b);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.fillRect(375, 250, 85, 35, TFT_BLACK);
-    tft.setCursor(376, 290);
+    tft.fillRect(370, 260, 100, 40, TFT_BLACK);
+    tft.setCursor(375, 290);
     tft.printf("%.1f  A", courant2);
     courant2_prev = courant2;
   }
