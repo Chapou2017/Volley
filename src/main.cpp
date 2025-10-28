@@ -628,8 +628,8 @@ void loop() {
   updateVitesse();
   updateSpin();
   updateTension1();
-  updateTension2();
+//  updateTension2();
   updateCourant1();
-  updateCourant2();
+//  updateCourant2();
 }
 
