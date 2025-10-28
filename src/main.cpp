@@ -72,7 +72,7 @@ const int spinMin = -50;
 
 // Variables pour la gestion anti-rebond du clavier
 unsigned long lastKeyPressTime = 0;
-const unsigned long keyDebounceDelay = 200;  // Délai anti-rebond en millisecondes
+const unsigned long keyDebounceDelay = 400;  // Délai anti-rebond en millisecondes
 char lastKey = 0;  // Dernière touche pressée
 
 // Variables dynamiques - affichage sur TFT
@@ -457,7 +457,7 @@ void loop() {
           lcd.print(" km/h");
           lcd.setCursor(17, 0);
       }
-    //  delay(200);
+      delay(200);
     }
   }
   engine_ss();
