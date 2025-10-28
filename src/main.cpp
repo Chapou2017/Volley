@@ -117,7 +117,7 @@ int rawValueI1 = 0;
 int rawValueI2 = 0;
 // Constantes ACS712-20A
 const float ACS712_SENSITIVITY = 0.100;  // 100 mV/A pour le modèle 20A
-const float ACS712_ZERO_CURRENT = 2.5;   // Tension à 0A (point milieu)
+const float ACS712_ZERO_CURRENT = 1.65;   // Point milieu à 1.65V pour alimentation 3.3V (3.3V/2) pat un ESP32
 
 // Paramètres de filtrage pour stabiliser la mesure
 const int NB_ECHANTILLONS = 100;  // Nombre d'échantillons pour la moyenne
@@ -350,7 +350,7 @@ float MesureCourant(int rawValue) {
   float voltage = (rawValue / 4095.0) * 3.3;
   
   // Calcul du courant : (Tension - Point zéro) / Sensibilité
-  // Pour ACS712-20A : 100mV/A, point zéro à 2.5V
+  // Pour ACS712-20A : 100mV/A, point zéro à 1.65V (pour VCC=3.3V)
   float courant = (voltage - ACS712_ZERO_CURRENT) / ACS712_SENSITIVITY;
   
   // Retourner la valeur absolue pour avoir le courant en Ampères
