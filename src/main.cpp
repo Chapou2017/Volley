@@ -74,6 +74,7 @@ const int spinMin = -50;
 unsigned long lastKeyPressTime = 0;
 const unsigned long keyDebounceDelay = 200;  // Délai anti-rebond en millisecondes
 char lastKey = 0;  // Dernière touche pressée
+bool keyProcessed = false;  // Indique si la touche actuelle a déjà été traitée
 
 // Variables dynamiques - affichage sur TFT
 int vitesse = 0;
@@ -398,12 +399,11 @@ void loop() {
 
   // Gestion anti-rebond du clavier
   if (key != 0) { // Si une touche est pressée (key différente de "null")
-
-    // Vérifier si assez de temps s'est écoulé depuis la dernière pression
-    // ET si c'est une touche différente de la précédente
-    if ((currentTime - lastKeyPressTime > keyDebounceDelay) || (key != lastKey)) {
-      lastKeyPressTime = currentTime;
+    // Si c'est une nouvelle touche OU si assez de temps s'est écoulé ET la touche précédente a été relâchée
+    if ((key != lastKey) || (!keyProcessed && (millis() - lastKeyPressTime > keyDebounceDelay))) {
+      lastKeyPressTime = millis();
       lastKey = key;
+      keyProcessed = true;  // Marquer cette pression comme traitée
   
       if (key >= '0' && key <= '9') {
         inputString += key;
@@ -460,6 +460,9 @@ void loop() {
       }
     //  delay(200);
     }
+  } else {
+    // Aucune touche pressée : réinitialiser le flag pour permettre une nouvelle détection
+    keyProcessed = false;
   }
   engine_ss();
   spin_update();
