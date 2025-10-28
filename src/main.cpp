@@ -82,9 +82,9 @@ int regime2 = 0;
 
 // Variables de mesure de tension
 // Broche analogique
-const int analogPinV1 = 33;
-const int analogPinV2 = 32;
-const int analogPinV3 = 35;
+const int analogPinV1 = 34;
+const int analogPinV2 = 39;
+const int analogPinV3 = 36;
 // Variables
 int rawValue_1 = 0;
 int rawValue_2 = 0;
