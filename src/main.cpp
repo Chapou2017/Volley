@@ -107,6 +107,18 @@ float tension_alimentation = 0.00;
 // Résistances du pont diviseur
 const float R1 = 30000.0;
 const float R2 = 7500.0;
+
+// Variables de mesure de courant (ACS712-20A)
+// Broches analogiques pour les capteurs de courant
+const int analogPinI1 = 35;  // GPIO35 pour capteur courant moteur 1
+const int analogPinI2 = 25;  // GPIO32 pour capteur courant moteur 2 (à adapter selon votre câblage)
+// Variables de mesure brute
+int rawValueI1 = 0;
+int rawValueI2 = 0;
+// Constantes ACS712-20A
+const float ACS712_SENSITIVITY = 0.100;  // 100 mV/A pour le modèle 20A
+const float ACS712_ZERO_CURRENT = 2.5;   // Tension à 0A (point milieu)
+
 // Paramètres de filtrage pour stabiliser la mesure
 const int NB_ECHANTILLONS = 100;  // Nombre d'échantillons pour la moyenne
 const float ALPHA_FILTRE = 0.2;   // Coefficient du filtre passe-bas (0.1 à 0.3 recommandé)
@@ -269,7 +281,7 @@ void updateTension1() {
 
 void updateCourant1() {
   // Ne mettre à jour que si la valeur a changé
-  if (abs(tension2 - courant1_prev) > 0.05) {
+  if (abs(courant1 - courant1_prev) > 0.05) {
     tft.setFreeFont(&FreeSans12pt7b);
     tft.setCursor(137, 210);
     tft.println("Courant");
@@ -279,14 +291,14 @@ void updateCourant1() {
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.fillRect(130, 260, 100, 40, TFT_BLACK);
     tft.setCursor(135, 290);
-    tft.printf("%.1f  A", tension2);
-    courant1_prev = tension2;
+    tft.printf("%.1f  A", courant1);
+    courant1_prev = courant1;
   }
 }
 
 void updateTension2() {
   // Ne mettre à jour que si la valeur a changé
-  if (abs(tension2 - tension_moteur_2_prev) > 0.05) {
+  if (abs(tension_moteur_2 - tension_moteur_2_prev) > 0.05) {
     tft.setFreeFont(&FreeSans12pt7b);
     tft.setCursor(259, 210);
     tft.println("Tension");
@@ -296,8 +308,8 @@ void updateTension2() {
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.fillRect(255, 250, 85, 35, TFT_BLACK);
     tft.setCursor(260, 290);
-    tft.printf("%.1f  v", tension2);
-    tension_moteur_2_prev = tension2;
+    tft.printf("%.1f  v", tension_moteur_2);
+    tension_moteur_2_prev = tension_moteur_2;
   }
 }
 
@@ -332,6 +344,19 @@ float MesureTension(int voltage) {
   return tension_reelle;
 }
 
+// Fonction de calcul de courant (ACS712-20A)
+float MesureCourant(int rawValue) {
+  // Conversion de la valeur ADC en tension (0-3.3V sur ESP32)
+  float voltage = (rawValue / 4095.0) * 3.3;
+  
+  // Calcul du courant : (Tension - Point zéro) / Sensibilité
+  // Pour ACS712-20A : 100mV/A, point zéro à 2.5V
+  float courant = (voltage - ACS712_ZERO_CURRENT) / ACS712_SENSITIVITY;
+  
+  // Retourner la valeur absolue pour avoir le courant en Ampères
+  return abs(courant);
+}
+
 // Fonction de mesure analogique avec moyenne (oversampling)
 int mesureAnalogAvecMoyenne(int pin) {
   long somme = 0;
@@ -360,6 +385,22 @@ void mesure_tension() {
   tension_moteur_2 = ALPHA_FILTRE * nouvelle_tension_2 + (1.0 - ALPHA_FILTRE) * tension_moteur_2;
   tension_alimentation = ALPHA_FILTRE * nouvelle_tension_alim + (1.0 - ALPHA_FILTRE) * tension_alimentation;
 }
+
+// fonction de mesure de courant avec filtrage (ACS712)
+void mesure_courant() {
+  // Mesure avec moyenne de plusieurs échantillons
+  rawValueI1 = mesureAnalogAvecMoyenne(analogPinI1);
+  rawValueI2 = mesureAnalogAvecMoyenne(analogPinI2);
+  
+  // Calcul du nouveau courant
+  float nouveau_courant_1 = MesureCourant(rawValueI1);
+  float nouveau_courant_2 = MesureCourant(rawValueI2);
+  
+  // Application d'un filtre passe-bas (lissage exponentiel)
+  courant1 = ALPHA_FILTRE * nouveau_courant_1 + (1.0 - ALPHA_FILTRE) * courant1;
+  courant2 = ALPHA_FILTRE * nouveau_courant_2 + (1.0 - ALPHA_FILTRE) * courant2;
+}
+
 
 //========================= Déclaration des interruptions =====================================
 
@@ -555,6 +596,7 @@ void loop() {
   rpm_pwm_calculation();
   commandeMoteur1();
   mesure_tension();
+  mesure_courant();
 
   // Mise à jour des variables de fonctionnement
   updateVitesse();
