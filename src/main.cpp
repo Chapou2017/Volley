@@ -231,19 +231,23 @@ void updateVitesse() {
 }
 
 void updateSpin() {
-  tft.setFreeFont(&FreeSans12pt7b);
-  tft.setCursor(300, 80);
-  tft.println("Effet (spin)");
+  // Ne mettre à jour que si la valeur a changé
+  if (spin != spin_prev) {
+    tft.setFreeFont(&FreeSans12pt7b);
+    tft.setCursor(300, 80);
+    tft.println("Effet (spin)");
 
-  tft.setFreeFont(&FreeSans24pt7b);
-  tft.setTextColor(TFT_GREEN, TFT_BLACK);
-  tft.fillRect(320, 110, 90, 50, TFT_BLACK);
-  tft.setCursor(320, 150);
-  tft.printf("%2d", spin);
-  tft.setFreeFont(&FreeSans18pt7b);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.setCursor(420, 150);
-  tft.println("%");
+    tft.setFreeFont(&FreeSans24pt7b);
+    tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    tft.fillRect(320, 110, 90, 50, TFT_BLACK);
+    tft.setCursor(320, 150);
+    tft.printf("%2d", spin);
+    tft.setFreeFont(&FreeSans18pt7b);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.setCursor(420, 150);
+    tft.println("%");
+    spin_prev = spin;
+  }
 }
 
 void updateTension1() {
@@ -264,43 +268,56 @@ void updateTension1() {
 }
 
 void updateCourant1() {
-  tft.setFreeFont(&FreeSans12pt7b);
-  tft.setCursor(137, 210);
-  tft.println("Courant");
-  tft.setCursor(135, 237);
-  tft.println("moteur 1");
-  tft.setFreeFont(&FreeSans18pt7b);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.fillRect(130, 260, 100, 40, TFT_BLACK);
-  tft.setCursor(135, 290);
-  tft.printf("%.1f  A", tension2);
+  // Ne mettre à jour que si la valeur a changé
+  if (abs(tension2 - courant1_prev) > 0.05) {
+    tft.setFreeFont(&FreeSans12pt7b);
+    tft.setCursor(137, 210);
+    tft.println("Courant");
+    tft.setCursor(135, 237);
+    tft.println("moteur 1");
+    tft.setFreeFont(&FreeSans18pt7b);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.fillRect(130, 260, 100, 40, TFT_BLACK);
+    tft.setCursor(135, 290);
+    tft.printf("%.1f  A", tension2);
+    courant1_prev = tension2;
+  }
 }
 
 void updateTension2() {
-  tft.setFreeFont(&FreeSans12pt7b);
-  tft.setCursor(259, 210);
-  tft.println("Tension");
-  tft.setCursor(256, 237);
-  tft.println("moteur 2");
-  tft.setFreeFont(&FreeSans18pt7b);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.fillRect(255, 250, 85, 35, TFT_BLACK);
-  tft.setCursor(260, 290);
-  tft.printf("%.1f  v", tension2);
+  // Ne mettre à jour que si la valeur a changé
+  if (abs(tension2 - tension_moteur_2_prev) > 0.05) {
+    tft.setFreeFont(&FreeSans12pt7b);
+    tft.setCursor(259, 210);
+    tft.println("Tension");
+    tft.setCursor(256, 237);
+    tft.println("moteur 2");
+    tft.setFreeFont(&FreeSans18pt7b);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.fillRect(255, 250, 85, 35, TFT_BLACK);
+    tft.setCursor(260, 290);
+    tft.printf("%.1f  v", tension2);
+    tension_moteur_2_prev = tension2;
+  }
 }
 
 void updateCourant2() {
-  tft.setFreeFont(&FreeSans12pt7b);
-  tft.setCursor(380, 210);
-  tft.println("Courant");
-  tft.setCursor(377, 237);
-  tft.println("moteur 2");
-  tft.setFreeFont(&FreeSans18pt7b);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.fillRect(375, 250, 85, 35, TFT_BLACK);
-  tft.setCursor(376, 290);
-  tft.printf("%.1f  A", courant2);
+  // Ne mettre à jour que si la valeur a changé
+  if (abs(courant2 - courant2_prev) > 0.05) {
+    tft.setFreeFont(&FreeSans12pt7b);
+    tft.setCursor(380, 210);
+    tft.println("Courant");
+    tft.setCursor(377, 237);
+    tft.println("moteur 2");
+    tft.setFreeFont(&FreeSans18pt7b);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.fillRect(375, 250, 85, 35, TFT_BLACK);
+    tft.setCursor(376, 290);
+    tft.printf("%.1f  A", courant2);
+    courant2_prev = courant2;
+  }
 }
+
 
 // fonction de correction de mesure de tension
 float corrigerTension(float tension_lue) {
