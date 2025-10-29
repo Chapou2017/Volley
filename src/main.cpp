@@ -3,18 +3,125 @@
 #include <Wire.h>
 #include <I2CKeyPad.h>
 #include <LiquidCrystal_I2C.h>
+#include <TM1637Display.h>
+#include <PCF8574.h>
 
 //======================== Déclaration des adresses I2C ===================================
 
 // Adresse I2C LCD
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
-// Adresse du PCF8574
+// Adresse du PCF8574 pour clavier
 #define I2C_ADDR 0x20
+
+// Adresse du PCF8574 pour GPIO extender (TM1637)
+#define PCF8574_ADDR 0x21  // À ajuster selon votre module (0x20, 0x21, 0x22, etc.)
+PCF8574 pcf8574(PCF8574_ADDR);
 
 //========================= TFT instance ==================================================
 
 TFT_eSPI tft = TFT_eSPI();
+
+//======================== Classe TM1637 via PCF8574 ======================================
+
+// Classe wrapper pour utiliser TM1637 via PCF8574
+class TM1637_PCF {
+private:
+  PCF8574* pcf;
+  uint8_t clkPin;
+  uint8_t dioPin;
+  uint8_t brightness;
+  
+  void bitDelay() { delayMicroseconds(100); }
+  
+  void start() {
+    pcf->digitalWrite(dioPin, HIGH);
+    pcf->digitalWrite(clkPin, HIGH);
+    bitDelay();
+    pcf->digitalWrite(dioPin, LOW);
+  }
+  
+  void stop() {
+    pcf->digitalWrite(clkPin, LOW);
+    bitDelay();
+    pcf->digitalWrite(dioPin, LOW);
+    bitDelay();
+    pcf->digitalWrite(clkPin, HIGH);
+    bitDelay();
+    pcf->digitalWrite(dioPin, HIGH);
+  }
+  
+  void writeByte(uint8_t data) {
+    for (uint8_t i = 0; i < 8; i++) {
+      pcf->digitalWrite(clkPin, LOW);
+      bitDelay();
+      pcf->digitalWrite(dioPin, (data & 0x01) ? HIGH : LOW);
+      bitDelay();
+      pcf->digitalWrite(clkPin, HIGH);
+      bitDelay();
+      data >>= 1;
+    }
+    // ACK
+    pcf->digitalWrite(clkPin, LOW);
+    bitDelay();
+    pcf->digitalWrite(clkPin, HIGH);
+    bitDelay();
+  }
+
+public:
+  TM1637_PCF(PCF8574* pcfPtr, uint8_t clk, uint8_t dio) : pcf(pcfPtr), clkPin(clk), dioPin(dio), brightness(7) {}
+  
+  void begin() {
+    pcf->pinMode(clkPin, OUTPUT);
+    pcf->pinMode(dioPin, OUTPUT);
+    pcf->digitalWrite(clkPin, HIGH);
+    pcf->digitalWrite(dioPin, HIGH);
+  }
+  
+  void setBrightness(uint8_t b) {
+    brightness = b & 0x0f;
+  }
+  
+  void showNumberDec(int num, bool leadingZero = false) {
+    const uint8_t digitToSegment[] = {
+      0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F  // 0-9
+    };
+    
+    uint8_t digits[4] = {0, 0, 0, 0};
+    bool negative = num < 0;
+    if (negative) num = -num;
+    
+    digits[3] = num % 10;
+    digits[2] = (num / 10) % 10;
+    digits[1] = (num / 100) % 10;
+    digits[0] = (num / 1000) % 10;
+    
+    // Commande d'écriture de données
+    start();
+    writeByte(0x40);  // Mode écriture automatique
+    stop();
+    
+    // Écrire les 4 chiffres
+    start();
+    writeByte(0xC0);  // Adresse de départ
+    for (int i = 0; i < 4; i++) {
+      if (!leadingZero && i < 3 && digits[i] == 0 && num < pow(10, 3-i)) {
+        writeByte(0x00);  // Éteindre les zéros de tête
+      } else {
+        writeByte(digitToSegment[digits[i]]);
+      }
+    }
+    stop();
+    
+    // Contrôle de luminosité
+    start();
+    writeByte(0x88 | brightness);
+    stop();
+  }
+};
+
+TM1637_PCF displayRPM1(&pcf8574, PCF_TM1637_CLK_1, PCF_TM1637_DIO_1);
+TM1637_PCF displayRPM2(&pcf8574, PCF_TM1637_CLK_2, PCF_TM1637_DIO_2);
 
 //========================= Déclaration des variables =====================================
 
@@ -48,6 +155,18 @@ const int LPWM_1 = 33;          // GPIO33 pour sens de rotation à gauche moteur
 const int RPWM_2 = 32;          // GPIO32 pour sens de rotation à droite moteur 2
 const int LPWM_2 = 19;          // GPIO19 pour sens de rotation à gauche moteur 2
 
+// Pins des capteurs TCRT5000 pour mesure de vitesse
+const int TCRT_MOTEUR_1 = 5;    // GPIO5 pour capteur vitesse moteur 1
+const int TCRT_MOTEUR_2 = 13;   // GPIO13 pour capteur vitesse moteur 2
+const int PULSES_PER_REV = 1;   // Nombre de trous/encoches par tour (à ajuster selon votre disque)
+
+// Pins des afficheurs TM1637 pour affichage RPM (via PCF8574)
+// PCF8574 P0-P3 pour TM1637 moteur 1, P4-P5 pour TM1637 moteur 2
+const int PCF_TM1637_CLK_1 = 0;    // P0 du PCF8574 pour CLK afficheur RPM moteur 1
+const int PCF_TM1637_DIO_1 = 1;    // P1 du PCF8574 pour DIO afficheur RPM moteur 1
+const int PCF_TM1637_CLK_2 = 2;    // P2 du PCF8574 pour CLK afficheur RPM moteur 2
+const int PCF_TM1637_DIO_2 = 3;    // P3 du PCF8574 pour DIO afficheur RPM moteur 2
+
 // PWM Channels
 #define RPWM1_CHANNEL 0
 #define LPWM1_CHANNEL 1
@@ -60,6 +179,14 @@ volatile bool motorRunning = false;  // État du moteur (true = ON, false = OFF)
 bool lastMotorState = false;         // Pour détecter les changements d'état
 volatile bool ledState = false;
 volatile unsigned long lastInterruptTime = 0;
+
+// Variables pour la mesure de vitesse (TCRT5000)
+volatile unsigned long pulseCount1 = 0;    // Compteur d'impulsions moteur 1
+volatile unsigned long pulseCount2 = 0;    // Compteur d'impulsions moteur 2
+unsigned long lastRPMCalc = 0;             // Dernier calcul de RPM
+const unsigned long RPM_CALC_INTERVAL = 100; // Intervalle de calcul RPM en ms
+int rpm_moteur_1 = 0;                      // RPM mesuré moteur 1
+int rpm_moteur_2 = 0;                      // RPM mesuré moteur 2
 
 // Variables pour le contrôle du spin et de son affichage
 volatile int spinPercent = 0;
@@ -330,6 +457,21 @@ void updateCourant2() {
   }
 }
 
+// Fonction d'affichage RPM sur TM1637
+void afficher_rpm_tm1637() {
+  // Affichage moteur 1 sur TM1637
+  if (abs(regime1 - regime1_prev) > 10) {
+    displayRPM1.showNumberDec(regime1, false);  // Affiche le RPM sans zéros de tête
+    regime1_prev = regime1;
+  }
+  
+  // Affichage moteur 2 sur TM1637
+  if (abs(regime2 - regime2_prev) > 10) {
+    displayRPM2.showNumberDec(regime2, false);
+    regime2_prev = regime2;
+  }
+}
+
 
 // fonction de correction de mesure de tension
 float corrigerTension(float tension_lue) {
@@ -419,8 +561,40 @@ void mesure_courant() {
   courant2 = ALPHA_FILTRE * nouveau_courant_2 + (1.0 - ALPHA_FILTRE) * courant2;
 }
 
+// Fonction de calcul du RPM à partir des impulsions
+void calculer_rpm() {
+  unsigned long currentTime = millis();
+  unsigned long deltaTime = currentTime - lastRPMCalc;
+  
+  if (deltaTime >= RPM_CALC_INTERVAL) {
+    // Désactiver temporairement les interruptions pour lecture atomique
+    noInterrupts();
+    unsigned long pulses1 = pulseCount1;
+    unsigned long pulses2 = pulseCount2;
+    pulseCount1 = 0;
+    pulseCount2 = 0;
+    interrupts();
+    
+    // Calcul RPM : (impulsions / encoches_par_tour) * (60000 / deltaTime_ms)
+    rpm_moteur_1 = (pulses1 * 60000) / (PULSES_PER_REV * deltaTime);
+    rpm_moteur_2 = (pulses2 * 60000) / (PULSES_PER_REV * deltaTime);
+    
+    lastRPMCalc = currentTime;
+  }
+}
+
 
 //========================= Déclaration des interruptions =====================================
+
+// Interruption TCRT5000 moteur 1
+void IRAM_ATTR compteur_moteur_1() {
+  pulseCount1++;
+}
+
+// Interruption TCRT5000 moteur 2
+void IRAM_ATTR compteur_moteur_2() {
+  pulseCount2++;
+}
 
 // Interruption de démarrage des moteurs
 void IRAM_ATTR button_start() {
@@ -474,6 +648,9 @@ void setup() {
   Wire.begin(); 
   Wire.setClock(100000);
 
+  // Initialisation du PCF8574 pour GPIO extender
+  pcf8574.begin();
+  
   // Configuration de la LED bouton engine start/stop
   pinMode(Led_ON, OUTPUT);
   digitalWrite(Led_ON, LOW);               // LED éteinte au démarrage
@@ -482,6 +659,10 @@ void setup() {
   pinMode(BUTTON_ON, INPUT_PULLUP);            // Résistance de pull-up activée
   pinMode(pinBoutonPlus, INPUT_PULLUP);        // Résistance de pull-up activée
   pinMode(pinBoutonMoins, INPUT_PULLUP);       // Résistance de pull-up activée
+
+  // Configuration des capteurs TCRT5000
+  pinMode(TCRT_MOTEUR_1, INPUT_PULLUP);        // Résistance de pull-up activée
+  pinMode(TCRT_MOTEUR_2, INPUT_PULLUP);        // Résistance de pull-up activée
 
   // Initialisation du clavier numérique
   if (clavier.begin() == false){
@@ -503,6 +684,10 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(pinBoutonPlus), augmenterSpin, FALLING);
   attachInterrupt(digitalPinToInterrupt(pinBoutonMoins), diminuerSpin, FALLING);
   
+  // Attachement des interruptions TCRT5000 (front descendant = passage du noir au blanc)
+  attachInterrupt(digitalPinToInterrupt(TCRT_MOTEUR_1), compteur_moteur_1, FALLING);
+  attachInterrupt(digitalPinToInterrupt(TCRT_MOTEUR_2), compteur_moteur_2, FALLING);
+  
   //============================ Setup écran TFT ============================
   tft.init();
   tft.setRotation(1);
@@ -513,9 +698,9 @@ void setup() {
   drawThickRect(0, 50, 239, 130, 3, TFT_YELLOW); // Rectangle "Vitesse ballon"
   drawThickRect(241, 50, 238, 130, 3, TFT_GREEN); // Rectangle "% Spin"
   drawThickRect(0, 182, 118, 132, 2, TFT_LIGHTGREY); // Rectangle "Tension moteur 1"
-  drawThickRect(120, 182, 119, 132, 2, TFT_LIGHTGREY); // Rectangle "Tension moteur 2"
-  drawThickRect(241, 182, 119, 132, 2, TFT_RED); // Rectangle "Régime moteur 1"
-  drawThickRect(362, 182, 118, 132, 2, TFT_RED); // Rectangle "Régime moteur 2"
+  drawThickRect(120, 182, 119, 132, 2, TFT_LIGHTGREY); // Rectangle "Courant moteur 1"
+  drawThickRect(241, 182, 119, 132, 2, TFT_LIGHTGREY); // Rectangle "Tension moteur 2"
+  drawThickRect(362, 182, 118, 132, 2, TFT_LIGHTGREY); // Rectangle "Courant moteur 2"
 
   // Titre
   tft.setFreeFont(&FreeSans12pt7b);
@@ -526,8 +711,8 @@ void setup() {
   updateVitesse();
   updateSpin();
   updateTension1();
-  updateTension2();
   updateCourant1();
+  updateTension2();
   updateCourant2();
 
   // PWM mot1 setup
@@ -535,6 +720,15 @@ void setup() {
   ledcAttachPin(RPWM_1, RPWM1_CHANNEL);
   ledcSetup(LPWM1_CHANNEL, 25000, 8);
   ledcAttachPin(LPWM_1, LPWM1_CHANNEL);
+
+  // Initialisation afficheurs TM1637 via PCF8574
+  displayRPM1.begin();
+  displayRPM1.setBrightness(0x0f);  // Luminosité maximale (0x00 à 0x0f)
+  displayRPM1.showNumberDec(0);     // Affiche 0 au démarrage
+  
+  displayRPM2.begin();
+  displayRPM2.setBrightness(0x0f);
+  displayRPM2.showNumberDec(0);
 
   // Calibration des capteurs de courant (décommenter pour calibrer, moteurs à l'arrêt)
   // delay(2000);
@@ -623,13 +817,27 @@ void loop() {
   commandeMoteur1();
   mesure_tension();
   mesure_courant();
+  calculer_rpm();  // Calcul des RPM à partir des impulsions TCRT5000
 
-  // Mise à jour des variables de fonctionnement
+  // Mise à jour des variables de fonctionnement avec valeurs mesurées
+  vitesse = VITESSE;
+  spin = spinPercent;
+  tension1 = tension_moteur_1;
+  tension2 = tension_moteur_2;
+  courant1 = courant1;
+  courant2 = courant2;
+  regime1 = rpm_moteur_1;  // RPM mesuré du moteur 1
+  regime2 = rpm_moteur_2;  // RPM mesuré du moteur 2
+
+  // Mise à jour de l'affichage TFT
   updateVitesse();
   updateSpin();
   updateTension1();
-//  updateTension2();
   updateCourant1();
-//  updateCourant2();
+  updateTension2();
+  updateCourant2();
+  
+  // Mise à jour des afficheurs TM1637 pour les régimes
+  afficher_rpm_tm1637();
 }
 
