@@ -41,7 +41,7 @@ const unsigned long interval = 50;
 // Pins des boutons ON, OFF et de contrôle du spin
 const int pinBoutonPlus = 14;   // GPIO14
 const int pinBoutonMoins = 27;  // GPIO27
-const int BUTTON_ON = 26;       // GPIO15
+const int BUTTON_ON = 26;       // GPIO26
 const int Led_ON = 12;          // GPIO12 pour led état bouton start/stop
 const int RPWM_1 = 16;          // GPIO25 pour sens de rotation à droite moteur 1
 const int LPWM_1 = 33;          // GPIO33 pour sens de rotation à gauche moteur 1
