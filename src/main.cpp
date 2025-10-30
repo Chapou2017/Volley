@@ -18,6 +18,13 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 #define PCF8574_ADDR 0x21  // À ajuster selon votre module (0x20, 0x21, 0x22, etc.)
 PCF8574 pcf8574(PCF8574_ADDR);
 
+// Pins des afficheurs TM1637 pour affichage RPM (via PCF8574)
+// PCF8574 P0-P3 pour TM1637 moteur 1, P4-P5 pour TM1637 moteur 2
+const int PCF_TM1637_CLK_1 = 0;    // P0 du PCF8574 pour CLK afficheur RPM moteur 1
+const int PCF_TM1637_DIO_1 = 1;    // P1 du PCF8574 pour DIO afficheur RPM moteur 1
+const int PCF_TM1637_CLK_2 = 2;    // P2 du PCF8574 pour CLK afficheur RPM moteur 2
+const int PCF_TM1637_DIO_2 = 3;    // P3 du PCF8574 pour DIO afficheur RPM moteur 2
+
 //========================= TFT instance ==================================================
 
 TFT_eSPI tft = TFT_eSPI();
@@ -163,13 +170,6 @@ const int LPWM_2 = 19;          // GPIO19 pour sens de rotation à gauche moteur
 const int TCRT_MOTEUR_1 = 5;    // GPIO5 pour capteur vitesse moteur 1
 const int TCRT_MOTEUR_2 = 13;   // GPIO13 pour capteur vitesse moteur 2
 const int PULSES_PER_REV = 1;   // Nombre de trous/encoches par tour (à ajuster selon votre disque)
-
-// Pins des afficheurs TM1637 pour affichage RPM (via PCF8574)
-// PCF8574 P0-P3 pour TM1637 moteur 1, P4-P5 pour TM1637 moteur 2
-const int PCF_TM1637_CLK_1 = 0;    // P0 du PCF8574 pour CLK afficheur RPM moteur 1
-const int PCF_TM1637_DIO_1 = 1;    // P1 du PCF8574 pour DIO afficheur RPM moteur 1
-const int PCF_TM1637_CLK_2 = 2;    // P2 du PCF8574 pour CLK afficheur RPM moteur 2
-const int PCF_TM1637_DIO_2 = 3;    // P3 du PCF8574 pour DIO afficheur RPM moteur 2
 
 // PWM Channels
 #define RPWM1_CHANNEL 0
