@@ -34,37 +34,41 @@ private:
   
   void bitDelay() { delayMicroseconds(100); }
   
+  void writePin(uint8_t pin, uint8_t value) {
+    pcf->write(pin, value);
+  }
+  
   void start() {
-    pcf->digitalWrite(dioPin, HIGH);
-    pcf->digitalWrite(clkPin, HIGH);
+    writePin(dioPin, HIGH);
+    writePin(clkPin, HIGH);
     bitDelay();
-    pcf->digitalWrite(dioPin, LOW);
+    writePin(dioPin, LOW);
   }
   
   void stop() {
-    pcf->digitalWrite(clkPin, LOW);
+    writePin(clkPin, LOW);
     bitDelay();
-    pcf->digitalWrite(dioPin, LOW);
+    writePin(dioPin, LOW);
     bitDelay();
-    pcf->digitalWrite(clkPin, HIGH);
+    writePin(clkPin, HIGH);
     bitDelay();
-    pcf->digitalWrite(dioPin, HIGH);
+    writePin(dioPin, HIGH);
   }
   
   void writeByte(uint8_t data) {
     for (uint8_t i = 0; i < 8; i++) {
-      pcf->digitalWrite(clkPin, LOW);
+      writePin(clkPin, LOW);
       bitDelay();
-      pcf->digitalWrite(dioPin, (data & 0x01) ? HIGH : LOW);
+      writePin(dioPin, (data & 0x01) ? HIGH : LOW);
       bitDelay();
-      pcf->digitalWrite(clkPin, HIGH);
+      writePin(clkPin, HIGH);
       bitDelay();
       data >>= 1;
     }
     // ACK
-    pcf->digitalWrite(clkPin, LOW);
+    writePin(clkPin, LOW);
     bitDelay();
-    pcf->digitalWrite(clkPin, HIGH);
+    writePin(clkPin, HIGH);
     bitDelay();
   }
 
@@ -72,10 +76,10 @@ public:
   TM1637_PCF(PCF8574* pcfPtr, uint8_t clk, uint8_t dio) : pcf(pcfPtr), clkPin(clk), dioPin(dio), brightness(7) {}
   
   void begin() {
-    pcf->pinMode(clkPin, OUTPUT);
-    pcf->pinMode(dioPin, OUTPUT);
-    pcf->digitalWrite(clkPin, HIGH);
-    pcf->digitalWrite(dioPin, HIGH);
+    // Pas besoin de pinMode avec PCF8574 de Rob Tillaart
+    // Les pins sont en sortie par défaut
+    writePin(clkPin, HIGH);
+    writePin(dioPin, HIGH);
   }
   
   void setBrightness(uint8_t b) {
