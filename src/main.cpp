@@ -152,6 +152,18 @@ const int MAX_RPM = 2500;         // Régime de rotation maximum du moteur (tr/m
 int rpm_input = 0;                // régime de rotation moteur pour la vitesse ballon demandée
 int pwm_value = 0;                // valeur de pwm pour atteindre le régime souhaité
 
+// Variables pour la régulation PID du régime moteur
+float Kp = 0.5;                   // Gain proportionnel (à ajuster)
+float Ki = 0.1;                   // Gain intégral (à ajuster)
+float Kd = 0.05;                  // Gain dérivé (à ajuster)
+float erreur_precedente_1 = 0;    // Erreur précédente moteur 1
+float erreur_precedente_2 = 0;    // Erreur précédente moteur 2
+float somme_erreurs_1 = 0;        // Somme des erreurs moteur 1 (terme intégral)
+float somme_erreurs_2 = 0;        // Somme des erreurs moteur 2 (terme intégral)
+int pwm_value_moteur_1 = 0;       // PWM régulé moteur 1
+int pwm_value_moteur_2 = 0;       // PWM régulé moteur 2
+const float INTEGRAL_MAX = 100.0; // Limite anti-windup pour l'intégrale
+
 // Gestion du delay pour l'affichage du spin
 unsigned long lastUpdate = 0;
 const unsigned long interval = 50;
@@ -331,18 +343,106 @@ void spin_update() {
 void rpm_pwm_calculation() {
   VITESSE = constrain(VITESSE, 0, V_MAX);
   rpm_input = (VITESSE * 1000 / 60) / (0.254 * 3.14159);
-  pwm_value = map(rpm_input, 0, MAX_RPM, 0, 255);
+  pwm_value = map(rpm_input, 0, MAX_RPM, 0, 255);  // Valeur de départ (feedforward)
 }
 
-// Fonction de commande du moteur
+// Fonction de régulation PID pour le moteur 1
+void reguler_moteur_1() {
+  if (!motorRunning) {
+    // Réinitialiser la régulation quand le moteur est arrêté
+    pwm_value_moteur_1 = 0;
+    somme_erreurs_1 = 0;
+    erreur_precedente_1 = 0;
+    return;
+  }
+  
+  // Calcul de l'erreur (consigne - mesure)
+  float erreur = rpm_input - rpm_moteur_1;
+  
+  // Terme proportionnel
+  float P = Kp * erreur;
+  
+  // Terme intégral (avec anti-windup)
+  somme_erreurs_1 += erreur;
+  somme_erreurs_1 = constrain(somme_erreurs_1, -INTEGRAL_MAX, INTEGRAL_MAX);
+  float I = Ki * somme_erreurs_1;
+  
+  // Terme dérivé
+  float D = Kd * (erreur - erreur_precedente_1);
+  erreur_precedente_1 = erreur;
+  
+  // Calcul de la correction PID
+  float correction = P + I + D;
+  
+  // Application de la correction au PWM de base (feedforward + feedback)
+  pwm_value_moteur_1 = constrain(pwm_value + correction, 0, 255);
+}
+
+// Fonction de régulation PID pour le moteur 2
+void reguler_moteur_2() {
+  if (!motorRunning) {
+    // Réinitialiser la régulation quand le moteur est arrêté
+    pwm_value_moteur_2 = 0;
+    somme_erreurs_2 = 0;
+    erreur_precedente_2 = 0;
+    return;
+  }
+  
+  // Calcul de l'erreur (consigne - mesure)
+  float erreur = rpm_input - rpm_moteur_2;
+  
+  // Terme proportionnel
+  float P = Kp * erreur;
+  
+  // Terme intégral (avec anti-windup)
+  somme_erreurs_2 += erreur;
+  somme_erreurs_2 = constrain(somme_erreurs_2, -INTEGRAL_MAX, INTEGRAL_MAX);
+  float I = Ki * somme_erreurs_2;
+  
+  // Terme dérivé
+  float D = Kd * (erreur - erreur_precedente_2);
+  erreur_precedente_2 = erreur;
+  
+  // Calcul de la correction PID
+  float correction = P + I + D;
+  
+  // Application de la correction au PWM de base (feedforward + feedback)
+  pwm_value_moteur_2 = constrain(pwm_value + correction, 0, 255);
+}
+
+// Fonction de commande du moteur 1
 void commandeMoteur1() {
   if (motorRunning) {
-    ledcWrite(RPWM1_CHANNEL, pwm_value);
+    ledcWrite(RPWM1_CHANNEL, pwm_value_moteur_1);  // Utilise le PWM régulé
     ledcWrite(LPWM1_CHANNEL, 0);
-    Serial.println(pwm_value);
+    // Debug : afficher consigne, mesure et PWM
+    Serial.print("M1 - Cible:");
+    Serial.print(rpm_input);
+    Serial.print(" Mesure:");
+    Serial.print(rpm_moteur_1);
+    Serial.print(" PWM:");
+    Serial.println(pwm_value_moteur_1);
   } else {
     ledcWrite(RPWM1_CHANNEL, 0);
     ledcWrite(LPWM1_CHANNEL, 0);
+  }
+}
+
+// Fonction de commande du moteur 2
+void commandeMoteur2() {
+  if (motorRunning) {
+    ledcWrite(RPWM2_CHANNEL, pwm_value_moteur_2);  // Utilise le PWM régulé
+    ledcWrite(LPWM2_CHANNEL, 0);
+    // Debug
+    Serial.print("M2 - Cible:");
+    Serial.print(rpm_input);
+    Serial.print(" Mesure:");
+    Serial.print(rpm_moteur_2);
+    Serial.print(" PWM:");
+    Serial.println(pwm_value_moteur_2);
+  } else {
+    ledcWrite(RPWM2_CHANNEL, 0);
+    ledcWrite(LPWM2_CHANNEL, 0);
   }
 }
 
@@ -725,6 +825,12 @@ void setup() {
   ledcSetup(LPWM1_CHANNEL, 25000, 8);
   ledcAttachPin(LPWM_1, LPWM1_CHANNEL);
 
+  // PWM mot2 setup
+  ledcSetup(RPWM2_CHANNEL, 25000, 8); // fréquence 25kHz, 8-bit resolution
+  ledcAttachPin(RPWM_2, RPWM2_CHANNEL);
+  ledcSetup(LPWM2_CHANNEL, 25000, 8);
+  ledcAttachPin(LPWM_2, LPWM2_CHANNEL);
+
   // Initialisation afficheurs TM1637 via PCF8574
   displayRPM1.begin();
   displayRPM1.setBrightness(0x0f);  // Luminosité maximale (0x00 à 0x0f)
@@ -817,11 +923,19 @@ void loop() {
   }
   engine_ss();
   spin_update();
-  rpm_pwm_calculation();
+  rpm_pwm_calculation();    // Calcul du RPM cible et PWM de base
+  calculer_rpm();           // Calcul des RPM mesurés à partir des impulsions TCRT5000
+  
+  // Régulation PID des moteurs
+  reguler_moteur_1();       // Ajuste le PWM du moteur 1 selon la mesure
+  reguler_moteur_2();       // Ajuste le PWM du moteur 2 selon la mesure
+  
+  // Commande des moteurs avec PWM régulé
   commandeMoteur1();
+  commandeMoteur2();
+  
   mesure_tension();
   mesure_courant();
-  calculer_rpm();  // Calcul des RPM à partir des impulsions TCRT5000
 
   // Mise à jour des variables de fonctionnement avec valeurs mesurées
   vitesse = VITESSE;
