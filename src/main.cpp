@@ -1,7 +1,8 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
 #include <Wire.h>
-#include <I2CKeyPad.h>
+// #include <I2CKeyPad.h>  // Bibliothèque standard (câblage croisé)
+#include "I2CKeyPad_Custom.h"  // Bibliothèque modifiée (câblage direct Adafruit PID 3845)
 #include <LiquidCrystal_I2C.h>
 #include <TM1637Display.h>
 #include <PCF8574.h>
@@ -137,41 +138,14 @@ TM1637_PCF displayRPM2(&pcf8574, PCF_TM1637_CLK_2, PCF_TM1637_DIO_2);
 //========================= Déclaration des variables =====================================
 
 // Clavier 4x3 via utilisation d'un PCF8574
-I2CKeyPad clavier(I2C_ADDR); 
+I2CKeyPad_Custom clavier(I2C_ADDR);  // Version personnalisée pour câblage direct
 
-// KEYMAP - Version avec remapping logiciel pour câblage direct Adafruit PID 3845
-// La bibliothèque I2CKeyPad suppose un ordre de pins spécifique que notre câblage ne respecte pas
-// On utilise donc un keymap dummy et on fera le remapping dans le code
-char keymap[19] = "ABCDEFGHIJKLMNOPQR"; // Keymap temporaire pour identification des index
+// KEYMAP - Câblage direct Adafruit PID 3845 (Broches 1-7 → P0-P6)
+// Utilise la bibliothèque I2CKeyPad_Custom.h qui gère le pinout spécifique
+char keymap[19] = "123 456 789 *0# NF";
 
-// Table de remapping: index détecté par la lib → touche réelle du clavier
-// Basé sur les tests physiques avec câblage direct (Broches 1-7 → P0-P6)
-// Pinout Adafruit PID3845: Br1=C2, Br2=L1, Br3=C1, Br4=L4, Br5=C3, Br6=L3, Br7=L2
-// Résultats tests: 3→idx4, 4→idx10, 5→idx2, 7→idx9, 8→idx1, #→idx12
-const char remapTable[19] = {
-  'X',  // Index 0 - non utilisé
-  '8',  // Index 1 - touche physique 8
-  '5',  // Index 2 - touche physique 5
-  'X',  // Index 3 - non utilisé
-  '3',  // Index 4 - touche physique 3
-  'X',  // Index 5 - non utilisé
-  'X',  // Index 6 - non utilisé
-  'X',  // Index 7 - non utilisé
-  'X',  // Index 8 - non utilisé
-  '7',  // Index 9 - touche physique 7
-  '4',  // Index 10 - touche physique 4
-  'X',  // Index 11 - non utilisé
-  '#',  // Index 12 - touche physique #
-  'X',  // Index 13 - non utilisé
-  'X',  // Index 14 - non utilisé
-  'X',  // Index 15 - non utilisé
-  'N',  // Index 16 - NoKey
-  'F',  // Index 17 - Fail
-  '\0'  // Null terminator
-};
-
-// Ancien câblage croisé (pour référence)
-// char keymap[19] = "123 456 789 *0# NF"; //Câblage: L1→P5, L2→P0, L3→P4, L4→P3, C1→P6, C2→P2, C3→P1
+// Note: La bibliothèque I2CKeyPad_Custom.h mappe automatiquement:
+// Adafruit Br1(C2)→P0, Br2(L1)→P1, Br3(C1)→P2, Br4(L4)→P3, Br5(C3)→P4, Br6(L3)→P5, Br7(L2)→P6
 
 // Variables pour la gestion du LCD
 String inputString = "";
@@ -808,13 +782,6 @@ void setup() {
     }
   clavier.loadKeyMap(keymap);
   
-  // MODE DEBUG : Afficher les index des touches détectées
-  Serial.println("=== MODE DEBUG CLAVIER ===");
-  Serial.println("Appuyez sur chaque touche et notez l'index affiche:");
-  Serial.println("Cela permettra de construire le bon keymap");
-  Serial.println("Format attendu: touche physique -> index detecte");
-  Serial.println("==============================");
-
   // Affichage de la valeur de spin
   printSpin(spinPercent);
 
@@ -897,28 +864,6 @@ void loop() {
 
   char key = clavier.getChar();
   
-  // REMAPPING : Convertir l'index détecté en touche réelle
-  if (key != 0 && key != 'N' && key != 'F') {
-    uint8_t rawIndex = clavier.getLastKey();
-    
-    // Remapper vers la vraie touche
-    if (rawIndex < 18) {
-      key = remapTable[rawIndex];
-    }
-    
-    // DEBUG : Afficher le remapping
-    Serial.print("Index brut: ");
-    Serial.print(rawIndex);
-    Serial.print(" -> Touche remappee: '");
-    Serial.print(key);
-    Serial.println("'");
-    
-    // Ignorer les touches non mappées (marquées 'X')
-    if (key == 'X') {
-      key = 0;  // Ignorer cette touche
-    }
-  }
-
   // Gestion anti-rebond du clavier
   if (key != 0) { // Si une touche est pressée (key différente de "null")
     // Vérifier si on peut traiter cette touche (nouvelle touche OU délai écoulé)
