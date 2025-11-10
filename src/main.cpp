@@ -149,12 +149,10 @@ I2CKeyPad clavier(I2C_ADDR);
 //   L3    7    8    9
 //   L4    *    0    #
 //
-// Le keymap suit la logique de scan de I2CKeyPad (matrice 7x7)
-// Intersections détectées: P1&P2→1, P1&P0→2, P1&P4→3, P6&P2→4, P6&P0→5, P6&P4→6,
-//                          P5&P2→7, P5&P0→8, P5&P4→9, P3&P2→*, P3&P0→0, P3&P4→#
-char keymap[19] = "2N1N3N50N4N86N79*0#NF"; //N=NoKey F=Fail
+// Format: exactement 18 caractères (même longueur que "123 456 789 *0# NF")
+char keymap[19] = " 21 3 546879*0# NF"; // 18 chars: espace-2-1-espace-3-espace-5-4-6-8-7-9-*-0-#-espace-N-F
 
-// Ancien câblage croisé (pour référence si besoin de revenir en arrière)
+// Ancien câblage croisé (pour référence)
 // char keymap[19] = "123 456 789 *0# NF"; //Câblage: L1→P5, L2→P0, L3→P4, L4→P3, C1→P6, C2→P2, C3→P1
 
 // Variables pour la gestion du LCD
@@ -791,6 +789,13 @@ void setup() {
     while (1);
     }
   clavier.loadKeyMap(keymap);
+  
+  // MODE DEBUG : Afficher les index des touches détectées
+  Serial.println("=== MODE DEBUG CLAVIER ===");
+  Serial.println("Appuyez sur chaque touche et notez l'index affiche:");
+  Serial.println("Cela permettra de construire le bon keymap");
+  Serial.println("Format attendu: touche physique -> index detecte");
+  Serial.println("==============================");
 
   // Affichage de la valeur de spin
   printSpin(spinPercent);
@@ -873,6 +878,15 @@ void setup() {
 void loop() {
 
   char key = clavier.getChar();
+
+  // DEBUG : Afficher l'index brut détecté
+  if (key != 0) {
+    uint8_t rawIndex = clavier.getLastKey();
+    Serial.print("Touche detectee: '");
+    Serial.print(key);
+    Serial.print("' -> Index brut: ");
+    Serial.println(rawIndex);
+  }
 
   // Gestion anti-rebond du clavier
   if (key != 0) { // Si une touche est pressée (key différente de "null")
