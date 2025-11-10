@@ -142,8 +142,11 @@ I2CKeyPad clavier(I2C_ADDR);
 // KEYMAP pour clavier Adafruit 3x4 Matrix Keypad (PID 3845)
 // Câblage direct: Broches 1-7 du clavier → P0-P6 du PCF8574
 // 
-// Pinout Adafruit 3x4: Br1=L1, Br2=L2, Br3=L3, Br4=L4, Br5=C1, Br6=C2, Br7=C3
-// Donc: P0=L1, P1=L2, P2=L3, P3=L4, P4=C1, P5=C2, P6=C3
+// Pinout REEL Adafruit 3x4 PID3845 (ordre spécifique intermixed):
+// Broche 1=COL2, Broche 2=ROW1, Broche 3=COL1, Broche 4=ROW4, 
+// Broche 5=COL3, Broche 6=ROW3, Broche 7=ROW2
+//
+// Donc câblage: P0=C2, P1=L1, P2=C1, P3=L4, P4=C3, P5=L3, P6=L2
 //
 // Matrice standard 3x4:
 //        C1   C2   C3
@@ -152,11 +155,12 @@ I2CKeyPad clavier(I2C_ADDR);
 //   L3    7    8    9
 //   L4    *    0    #
 //
-// Index calculé: (ligne × 3) + colonne
-// L1C1=0→1, L1C2=1→2, L1C3=2→3, L2C1=3→4, L2C2=4→5, L2C3=5→6,
-// L3C1=6→7, L3C2=7→8, L3C3=8→9, L4C1=9→*, L4C2=10→0, L4C3=11→#
+// Calcul des index avec la bibliothèque I2CKeyPad (ordre PCF: P0-P6):
+// La lib scanne: chaque colonne (mise à LOW) et lit les lignes (INPUT_PULLUP)
+// Index = position dans le tableau de scan
+// Avec P0=C2,P1=L1,P2=C1,P3=L4,P4=C3,P5=L3,P6=L2
 // Format: exactement 18 caractères + null terminator
-char keymap[19] = "123456789*0#    NF"; // 12 touches + 4 espaces + NF = 18 chars
+char keymap[19] = " 21 3 546879*0# NF"; // Mapping basé sur câblage réel Adafruit
 
 // Ancien câblage croisé (pour référence)
 // char keymap[19] = "123 456 789 *0# NF"; //Câblage: L1→P5, L2→P0, L3→P4, L4→P3, C1→P6, C2→P2, C3→P1
