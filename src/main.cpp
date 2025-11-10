@@ -139,28 +139,35 @@ TM1637_PCF displayRPM2(&pcf8574, PCF_TM1637_CLK_2, PCF_TM1637_DIO_2);
 // Clavier 4x3 via utilisation d'un PCF8574
 I2CKeyPad clavier(I2C_ADDR); 
 
-// KEYMAP pour clavier Adafruit 3x4 Matrix Keypad (PID 3845)
-// Câblage direct: Broches 1-7 du clavier → P0-P6 du PCF8574
-// 
-// Pinout REEL Adafruit 3x4 PID3845 (ordre spécifique intermixed):
-// Broche 1=COL2, Broche 2=ROW1, Broche 3=COL1, Broche 4=ROW4, 
-// Broche 5=COL3, Broche 6=ROW3, Broche 7=ROW2
-//
-// Donc câblage: P0=C2, P1=L1, P2=C1, P3=L4, P4=C3, P5=L3, P6=L2
-//
-// Matrice standard 3x4:
-//        C1   C2   C3
-//   L1    1    2    3
-//   L2    4    5    6
-//   L3    7    8    9
-//   L4    *    0    #
-//
-// Calcul des index avec la bibliothèque I2CKeyPad (ordre PCF: P0-P6):
-// La lib scanne: chaque colonne (mise à LOW) et lit les lignes (INPUT_PULLUP)
-// Index = position dans le tableau de scan
-// Avec P0=C2,P1=L1,P2=C1,P3=L4,P4=C3,P5=L3,P6=L2
-// Format: exactement 18 caractères + null terminator
-char keymap[19] = " 21 3 546879*0# NF"; // Mapping basé sur câblage réel Adafruit
+// KEYMAP - Version avec remapping logiciel pour câblage direct Adafruit PID 3845
+// La bibliothèque I2CKeyPad suppose un ordre de pins spécifique que notre câblage ne respecte pas
+// On utilise donc un keymap dummy et on fera le remapping dans le code
+char keymap[19] = "ABCDEFGHIJKLMNOPQR"; // Keymap temporaire pour identification des index
+
+// Table de remapping: index détecté par la lib → touche réelle du clavier
+// Basé sur les tests physiques avec câblage direct (Broches 1-7 → P0-P6)
+// Pinout Adafruit PID3845: Br1=C2, Br2=L1, Br3=C1, Br4=L4, Br5=C3, Br6=L3, Br7=L2
+const char remapTable[19] = {
+  'X',  // Index 0 - non utilisé
+  '8',  // Index 1 - touche physique 8
+  '5',  // Index 2 - touche physique 5
+  'X',  // Index 3 - non utilisé
+  'X',  // Index 4 - non utilisé
+  'X',  // Index 5 - non utilisé
+  'X',  // Index 6 - non utilisé
+  'X',  // Index 7 - non utilisé
+  'X',  // Index 8 - non utilisé
+  '7',  // Index 9 - touche physique 7
+  '4',  // Index 10 - touche physique 4
+  'X',  // Index 11 - non utilisé
+  '#',  // Index 12 - touche physique #
+  'X',  // Index 13 - non utilisé
+  'X',  // Index 14 - non utilisé
+  'X',  // Index 15 - non utilisé
+  'N',  // Index 16 - NoKey
+  'F',  // Index 17 - Fail
+  '\0'  // Null terminator
+};
 
 // Ancien câblage croisé (pour référence)
 // char keymap[19] = "123 456 789 *0# NF"; //Câblage: L1→P5, L2→P0, L3→P4, L4→P3, C1→P6, C2→P2, C3→P1
@@ -888,14 +895,27 @@ void setup() {
 void loop() {
 
   char key = clavier.getChar();
-
-  // DEBUG : Afficher l'index brut détecté (ignorer N et F qui sont les valeurs par défaut)
+  
+  // REMAPPING : Convertir l'index détecté en touche réelle
   if (key != 0 && key != 'N' && key != 'F') {
     uint8_t rawIndex = clavier.getLastKey();
-    Serial.print("Touche detectee: '");
+    
+    // Remapper vers la vraie touche
+    if (rawIndex < 18) {
+      key = remapTable[rawIndex];
+    }
+    
+    // DEBUG : Afficher le remapping
+    Serial.print("Index brut: ");
+    Serial.print(rawIndex);
+    Serial.print(" -> Touche remappee: '");
     Serial.print(key);
-    Serial.print("' -> Index brut: ");
-    Serial.println(rawIndex);
+    Serial.println("'");
+    
+    // Ignorer les touches non mappées (marquées 'X')
+    if (key == 'X') {
+      key = 0;  // Ignorer cette touche
+    }
   }
 
   // Gestion anti-rebond du clavier
