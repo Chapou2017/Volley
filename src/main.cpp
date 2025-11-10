@@ -879,8 +879,8 @@ void loop() {
 
   char key = clavier.getChar();
 
-  // DEBUG : Afficher l'index brut détecté
-  if (key != 0) {
+  // DEBUG : Afficher l'index brut détecté (ignorer N et F qui sont les valeurs par défaut)
+  if (key != 0 && key != 'N' && key != 'F') {
     uint8_t rawIndex = clavier.getLastKey();
     Serial.print("Touche detectee: '");
     Serial.print(key);
