@@ -142,7 +142,7 @@ I2CKeyPad_Custom clavier(I2C_ADDR);  // Version personnalisée pour câblage dir
 
 // KEYMAP - Câblage direct Adafruit PID 3845 (Broches 1-7 → P0-P6)
 // Utilise la bibliothèque I2CKeyPad_Custom.h qui gère le pinout spécifique
-char keymap[19] = "123 456 789 *0# NF";
+char keymap[19] = "123456789*0#    NF";
 
 // Note: La bibliothèque I2CKeyPad_Custom.h mappe automatiquement:
 // Adafruit Br1(C2)→P0, Br2(L1)→P1, Br3(C1)→P2, Br4(L4)→P3, Br5(C3)→P4, Br6(L3)→P5, Br7(L2)→P6
