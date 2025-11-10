@@ -139,11 +139,20 @@ TM1637_PCF displayRPM2(&pcf8574, PCF_TM1637_CLK_2, PCF_TM1637_DIO_2);
 // Clavier 4x3 via utilisation d'un PCF8574
 I2CKeyPad clavier(I2C_ADDR); 
 
-// KEYMAP corrigé pour câblage direct avec votre clavier spécifique
-// Câblage direct (PCF8574 soudé sur clavier): L1→P0, L2→P1, L3→P2, L4→P3, C1→P4, C2→P5, C3→P6
-// Basé sur le pinout de votre clavier : les lignes et colonnes ne sont pas dans l'ordre standard
-// Le keymap doit correspondre à la matrice réelle du clavier
-char keymap[19] = "147*2580369#    NF"; //N=NoKey F=Fail
+// KEYMAP corrigé pour votre câblage direct spécifique
+// Câblage physique: P0=C2, P1=L1, P2=C1, P3=L4, P4=C3, P5=L3, P6=L2
+// 
+// Matrice du clavier standard:
+//        C1   C2   C3
+//   L1    1    2    3
+//   L2    4    5    6
+//   L3    7    8    9
+//   L4    *    0    #
+//
+// Le keymap suit la logique de scan de I2CKeyPad (matrice 7x7)
+// Intersections détectées: P1&P2→1, P1&P0→2, P1&P4→3, P6&P2→4, P6&P0→5, P6&P4→6,
+//                          P5&P2→7, P5&P0→8, P5&P4→9, P3&P2→*, P3&P0→0, P3&P4→#
+char keymap[19] = "2N1N3N50N4N86N79*0#NF"; //N=NoKey F=Fail
 
 // Ancien câblage croisé (pour référence si besoin de revenir en arrière)
 // char keymap[19] = "123 456 789 *0# NF"; //Câblage: L1→P5, L2→P0, L3→P4, L4→P3, C1→P6, C2→P2, C3→P1
