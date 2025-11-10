@@ -139,18 +139,24 @@ TM1637_PCF displayRPM2(&pcf8574, PCF_TM1637_CLK_2, PCF_TM1637_DIO_2);
 // Clavier 4x3 via utilisation d'un PCF8574
 I2CKeyPad clavier(I2C_ADDR); 
 
-// KEYMAP corrigé pour votre câblage direct spécifique
-// Câblage physique: P0=C2, P1=L1, P2=C1, P3=L4, P4=C3, P5=L3, P6=L2
+// KEYMAP pour clavier Adafruit 3x4 Matrix Keypad (PID 3845)
+// Câblage direct: Broches 1-7 du clavier → P0-P6 du PCF8574
 // 
-// Matrice du clavier standard:
+// Pinout Adafruit 3x4: Br1=L1, Br2=L2, Br3=L3, Br4=L4, Br5=C1, Br6=C2, Br7=C3
+// Donc: P0=L1, P1=L2, P2=L3, P3=L4, P4=C1, P5=C2, P6=C3
+//
+// Matrice standard 3x4:
 //        C1   C2   C3
 //   L1    1    2    3
 //   L2    4    5    6
 //   L3    7    8    9
 //   L4    *    0    #
 //
-// Format: exactement 18 caractères (même longueur que "123 456 789 *0# NF")
-char keymap[19] = " 21 3 546879*0# NF"; // 18 chars: espace-2-1-espace-3-espace-5-4-6-8-7-9-*-0-#-espace-N-F
+// Index calculé: (ligne × 3) + colonne
+// L1C1=0→1, L1C2=1→2, L1C3=2→3, L2C1=3→4, L2C2=4→5, L2C3=5→6,
+// L3C1=6→7, L3C2=7→8, L3C3=8→9, L4C1=9→*, L4C2=10→0, L4C3=11→#
+// Format: exactement 18 caractères + null terminator
+char keymap[19] = "123456789*0#    NF"; // 12 touches + 4 espaces + NF = 18 chars
 
 // Ancien câblage croisé (pour référence)
 // char keymap[19] = "123 456 789 *0# NF"; //Câblage: L1→P5, L2→P0, L3→P4, L4→P3, C1→P6, C2→P2, C3→P1
