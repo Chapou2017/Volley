@@ -147,12 +147,13 @@ char keymap[19] = "ABCDEFGHIJKLMNOPQR"; // Keymap temporaire pour identification
 // Table de remapping: index détecté par la lib → touche réelle du clavier
 // Basé sur les tests physiques avec câblage direct (Broches 1-7 → P0-P6)
 // Pinout Adafruit PID3845: Br1=C2, Br2=L1, Br3=C1, Br4=L4, Br5=C3, Br6=L3, Br7=L2
+// Résultats tests: 3→idx4, 4→idx10, 5→idx2, 7→idx9, 8→idx1, #→idx12
 const char remapTable[19] = {
   'X',  // Index 0 - non utilisé
   '8',  // Index 1 - touche physique 8
   '5',  // Index 2 - touche physique 5
   'X',  // Index 3 - non utilisé
-  'X',  // Index 4 - non utilisé
+  '3',  // Index 4 - touche physique 3
   'X',  // Index 5 - non utilisé
   'X',  // Index 6 - non utilisé
   'X',  // Index 7 - non utilisé
