@@ -197,8 +197,8 @@ volatile unsigned long pulseCount2 = 0;    // Compteur d'impulsions moteur 2
 volatile unsigned long lastPulseTime1 = 0; // Temps de la dernière impulsion moteur 1
 volatile unsigned long lastPulseTime2 = 0; // Temps de la dernière impulsion moteur 2
 unsigned long lastRPMCalc = 0;             // Dernier calcul de RPM
-const unsigned long RPM_CALC_INTERVAL = 100; // Intervalle de calcul RPM en ms
-const unsigned long DEBOUNCE_TIME = 5;     // Anti-rebond 5ms (ajuster selon besoin)
+const unsigned long RPM_CALC_INTERVAL = 200; // Intervalle de calcul RPM en ms (fixe pour calcul stable)
+const unsigned long DEBOUNCE_TIME = 10;     // Anti-rebond 10ms (augmenté pour meilleure filtration)
 int rpm_moteur_1 = 0;                      // RPM mesuré moteur 1
 int rpm_moteur_2 = 0;                      // RPM mesuré moteur 2
 
@@ -589,27 +589,28 @@ void calculer_rpm() {
     pulseCount2 = 0;
     interrupts();
     
-    // Calcul RPM : (impulsions / PULSES_PER_REV) * (60000 / deltaTime_ms)
-    // Formule correcte : RPM = (impulsions_par_seconde * 60) / PULSES_PER_REV
-    // impulsions_par_seconde = pulses * (1000 / deltaTime)
-    if (deltaTime > 0) {  // Protection division par zéro
-      rpm_moteur_1 = (pulses1 * 60000) / (PULSES_PER_REV * deltaTime);
-      rpm_moteur_2 = (pulses2 * 60000) / (PULSES_PER_REV * deltaTime);
+    // CORRECTION : Utiliser RPM_CALC_INTERVAL fixe au lieu de deltaTime variable
+    // Calcul RPM basé sur l'intervalle fixe défini (pas le deltaTime réel qui varie)
+    if (pulses1 > 0 || pulses2 > 0) {  // Calculer seulement s'il y a des impulsions
+      rpm_moteur_1 = (pulses1 * 60000) / (PULSES_PER_REV * RPM_CALC_INTERVAL);
+      rpm_moteur_2 = (pulses2 * 60000) / (PULSES_PER_REV * RPM_CALC_INTERVAL);
+    } else {
+      // Pas d'impulsions = moteur arrêté
+      rpm_moteur_1 = 0;
+      rpm_moteur_2 = 0;
     }
     
     lastRPMCalc = currentTime;
     
-    // Debug : Afficher les valeurs brutes
+    // Debug : Afficher les valeurs brutes avec deltaTime réel
     Serial.print("Pulses1: ");
     Serial.print(pulses1);
-    Serial.print(" Pulses2: ");
-    Serial.print(pulses2);
-    Serial.print(" DeltaTime: ");
+    Serial.print(" DeltaTime_reel: ");
     Serial.print(deltaTime);
-    Serial.print("ms -> RPM1: ");
-    Serial.print(rpm_moteur_1);
-    Serial.print(" RPM2: ");
-    Serial.println(rpm_moteur_2);
+    Serial.print("ms (theorique:");
+    Serial.print(RPM_CALC_INTERVAL);
+    Serial.print("ms) -> RPM1: ");
+    Serial.println(rpm_moteur_1);
   }
 }
 
