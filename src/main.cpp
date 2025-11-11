@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
 #include <Wire.h>
-#include <I2CKeyPad.h>
-#include <LiquidCrystal_I2C.h>
+// #include <I2CKeyPad.h>  // Bibliothèque standard (câblage croisé)
+#include "I2CKeyPad_Custom.h"  // Bibliothèque modifiée (câblage direct Adafruit PID 3845)#include <LiquidCrystal_I2C.h>
 #include <TM1637Display.h>
 #include <PCF8574.h>
 
