@@ -138,11 +138,14 @@ TM1637_PCF displayRPM2(&pcf8574, PCF_TM1637_CLK_2, PCF_TM1637_DIO_2);
 //========================= Déclaration des variables =====================================
 
 // Clavier 4x3 via utilisation d'un PCF8574
-I2CKeyPad clavier(I2C_ADDR); 
-// Câblage croisé actuel: L1→P5, L2→P0, L3→P4, L4→P3, C1→P6, C2→P2, C3→P1
-char keymap[19] = "123 456 789 *0# NF"; //N=NoKey F=Fail
-// Câblage standard direct (PCF8574 soudé sur clavier): L1→P0, L2→P1, L3→P2, L4→P3, C1→P4, C2→P5, C3→P6
-//char keymap[19] = "1234567890*#    NF"; //N=NoKey F=Fail
+I2CKeyPad_Custom clavier(I2C_ADDR);  // Version personnalisée pour câblage direct
+
+// KEYMAP - Câblage direct Adafruit PID 3845 (Broches 1-7 → P0-P6)
+// Utilise la bibliothèque I2CKeyPad_Custom.h qui gère le pinout spécifique
+char keymap[19] = "123456789*0#    NF";
+
+// Note: La bibliothèque I2CKeyPad_Custom.h mappe automatiquement:
+// Adafruit Br1(C2)→P0, Br2(L1)→P1, Br3(C1)→P2, Br4(L4)→P3, Br5(C3)→P4, Br6(L3)→P5, Br7(L2)→P6
 
 // Variables pour la gestion du LCD
 String inputString = "";
