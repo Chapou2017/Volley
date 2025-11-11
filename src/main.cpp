@@ -197,8 +197,8 @@ volatile unsigned long pulseCount2 = 0;    // Compteur d'impulsions moteur 2
 volatile unsigned long lastPulseTime1 = 0; // Temps de la dernière impulsion moteur 1
 volatile unsigned long lastPulseTime2 = 0; // Temps de la dernière impulsion moteur 2
 unsigned long lastRPMCalc = 0;             // Dernier calcul de RPM
-const unsigned long RPM_CALC_INTERVAL = 200; // Intervalle de calcul RPM en ms (fixe pour calcul stable)
-const unsigned long DEBOUNCE_TIME = 10;     // Anti-rebond 10ms (augmenté pour meilleure filtration)
+const unsigned long RPM_CALC_INTERVAL = 100; // Intervalle de calcul RPM en ms (100ms = résolution de 150 RPM par pulse)
+const unsigned long DEBOUNCE_TIME = 50;     // Anti-rebond 50ms (augmenté pour éliminer les doubles détections)
 volatile int rpm_moteur_1 = 0;             // RPM mesuré moteur 1 (volatile pour accès multi-thread)
 volatile int rpm_moteur_2 = 0;             // RPM mesuré moteur 2 (volatile pour accès multi-thread)
 
@@ -264,7 +264,7 @@ const float ACS712_SENSITIVITY = 0.100;  // 100 mV/A pour le modèle 20A
 const float ACS712_ZERO_CURRENT = 1.43;   // Point milieu à 1.65V pour alimentation 3.3V (3.3V/2) pour un ESP32, 1.43V sur le GPIO35 après calibration
 
 // Paramètres de filtrage pour stabiliser la mesure
-const int NB_ECHANTILLONS = 20;   // RÉDUIT de 100 à 20 pour accélérer le loop
+const int NB_ECHANTILLONS = 100;   // Nombre d'échantillons pour moyenner les mesures analogiques (meilleure stabilité)
 const float ALPHA_FILTRE = 0.2;   // Coefficient du filtre passe-bas (0.1 à 0.3 recommandé)
 
 //========================= Déclaration des fonctions =====================================
@@ -581,6 +581,10 @@ void mesure_courant() {
 // Fonction de calcul du RPM à partir des impulsions
 // Cette fonction sera appelée par la tâche dédiée sur Core 0
 void calculer_rpm() {
+  static unsigned long lastValidRPMTime1 = 0;  // Dernier moment où on a eu des pulses (moteur 1)
+  static unsigned long lastValidRPMTime2 = 0;  // Dernier moment où on a eu des pulses (moteur 2)
+  const unsigned long RPM_TIMEOUT = 500;       // Timeout 500ms avant d'afficher 0
+  
   unsigned long currentTime = millis();
   unsigned long deltaTime = currentTime - lastRPMCalc;
   
@@ -594,13 +598,24 @@ void calculer_rpm() {
     interrupts();
     
     // Calcul RPM basé sur le temps réel écoulé
-    if (deltaTime > 0 && (pulses1 > 0 || pulses2 > 0)) {
-      rpm_moteur_1 = (pulses1 * 60000) / (PULSES_PER_REV * deltaTime);
-      rpm_moteur_2 = (pulses2 * 60000) / (PULSES_PER_REV * deltaTime);
-    } else {
-      // Pas d'impulsions = moteur arrêté
-      rpm_moteur_1 = 0;
-      rpm_moteur_2 = 0;
+    if (deltaTime > 0) {
+      // Moteur 1
+      if (pulses1 > 0) {
+        rpm_moteur_1 = (pulses1 * 60000) / (PULSES_PER_REV * deltaTime);
+        lastValidRPMTime1 = currentTime;  // Mise à jour du dernier moment valide
+      } else if (currentTime - lastValidRPMTime1 > RPM_TIMEOUT) {
+        // Pas de pulse depuis RPM_TIMEOUT ms = moteur arrêté
+        rpm_moteur_1 = 0;
+      }
+      // Sinon, on garde la dernière valeur RPM (pas de mise à jour)
+      
+      // Moteur 2
+      if (pulses2 > 0) {
+        rpm_moteur_2 = (pulses2 * 60000) / (PULSES_PER_REV * deltaTime);
+        lastValidRPMTime2 = currentTime;
+      } else if (currentTime - lastValidRPMTime2 > RPM_TIMEOUT) {
+        rpm_moteur_2 = 0;
+      }
     }
     
     lastRPMCalc = currentTime;
