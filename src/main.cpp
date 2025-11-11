@@ -199,8 +199,11 @@ volatile unsigned long lastPulseTime2 = 0; // Temps de la dernière impulsion mo
 unsigned long lastRPMCalc = 0;             // Dernier calcul de RPM
 const unsigned long RPM_CALC_INTERVAL = 200; // Intervalle de calcul RPM en ms (fixe pour calcul stable)
 const unsigned long DEBOUNCE_TIME = 10;     // Anti-rebond 10ms (augmenté pour meilleure filtration)
-int rpm_moteur_1 = 0;                      // RPM mesuré moteur 1
-int rpm_moteur_2 = 0;                      // RPM mesuré moteur 2
+volatile int rpm_moteur_1 = 0;             // RPM mesuré moteur 1 (volatile pour accès multi-thread)
+volatile int rpm_moteur_2 = 0;             // RPM mesuré moteur 2 (volatile pour accès multi-thread)
+
+// Handle de la tâche RPM sur Core 0
+TaskHandle_t taskRPMHandle = NULL;
 
 // Variables pour le contrôle du spin et de son affichage
 volatile int spinPercent = 0;
@@ -576,6 +579,7 @@ void mesure_courant() {
 }
 
 // Fonction de calcul du RPM à partir des impulsions
+// Cette fonction sera appelée par la tâche dédiée sur Core 0
 void calculer_rpm() {
   unsigned long currentTime = millis();
   unsigned long deltaTime = currentTime - lastRPMCalc;
@@ -589,8 +593,7 @@ void calculer_rpm() {
     pulseCount2 = 0;
     interrupts();
     
-    // CORRECTION : Utiliser deltaTime RÉEL pour un calcul précis
-    // Calcul RPM basé sur le temps réel écoulé (plus précis)
+    // Calcul RPM basé sur le temps réel écoulé
     if (deltaTime > 0 && (pulses1 > 0 || pulses2 > 0)) {
       rpm_moteur_1 = (pulses1 * 60000) / (PULSES_PER_REV * deltaTime);
       rpm_moteur_2 = (pulses2 * 60000) / (PULSES_PER_REV * deltaTime);
@@ -602,13 +605,23 @@ void calculer_rpm() {
     
     lastRPMCalc = currentTime;
     
-    // Debug : Afficher les valeurs brutes avec deltaTime réel
+    // Debug : Afficher les valeurs brutes
     Serial.print("Pulses1: ");
     Serial.print(pulses1);
-    Serial.print(" DeltaTime_reel: ");
+    Serial.print(" DeltaTime: ");
     Serial.print(deltaTime);
     Serial.print("ms -> RPM1: ");
     Serial.println(rpm_moteur_1);
+  }
+}
+
+// Tâche FreeRTOS dédiée à la mesure RPM sur Core 0
+void taskCalculRPM(void *parameter) {
+  Serial.println("Tache RPM demarree sur Core 0");
+  
+  for(;;) {  // Boucle infinie
+    calculer_rpm();
+    vTaskDelay(10 / portTICK_PERIOD_MS);  // Délai 10ms (libère le CPU)
   }
 }
 
@@ -726,6 +739,19 @@ void setup() {
   // Attachement des interruptions TCRT5000 (front descendant = passage du noir au blanc)
   attachInterrupt(digitalPinToInterrupt(TCRT_MOTEUR_1), compteur_moteur_1, FALLING);
   attachInterrupt(digitalPinToInterrupt(TCRT_MOTEUR_2), compteur_moteur_2, FALLING);
+  
+  // Création de la tâche dédiée au calcul RPM sur Core 0
+  xTaskCreatePinnedToCore(
+    taskCalculRPM,      // Fonction de la tâche
+    "TaskRPM",          // Nom de la tâche
+    4096,               // Taille de la pile (bytes)
+    NULL,               // Paramètre passé à la tâche
+    2,                  // Priorité (2 = haute priorité)
+    &taskRPMHandle,     // Handle de la tâche
+    0                   // Core 0 (Core 1 = loop principal)
+  );
+  
+  Serial.println("Tache RPM creee sur Core 0");
   
   //============================ Setup écran TFT ============================
   tft.init();
@@ -856,7 +882,7 @@ void loop() {
   commandeMoteur1();
   mesure_tension();
   mesure_courant();
-  calculer_rpm();  // Calcul des RPM à partir des impulsions TCRT5000
+  // calculer_rpm();  // SUPPRIMÉ : maintenant géré par la tâche sur Core 0
 
   // Mise à jour des variables de fonctionnement avec valeurs mesurées
   vitesse = VITESSE;
