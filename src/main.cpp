@@ -194,8 +194,11 @@ volatile unsigned long lastInterruptTime = 0;
 // Variables pour la mesure de vitesse (TCRT5000)
 volatile unsigned long pulseCount1 = 0;    // Compteur d'impulsions moteur 1
 volatile unsigned long pulseCount2 = 0;    // Compteur d'impulsions moteur 2
+volatile unsigned long lastPulseTime1 = 0; // Temps de la dernière impulsion moteur 1
+volatile unsigned long lastPulseTime2 = 0; // Temps de la dernière impulsion moteur 2
 unsigned long lastRPMCalc = 0;             // Dernier calcul de RPM
 const unsigned long RPM_CALC_INTERVAL = 100; // Intervalle de calcul RPM en ms
+const unsigned long DEBOUNCE_TIME = 5;     // Anti-rebond 5ms (ajuster selon besoin)
 int rpm_moteur_1 = 0;                      // RPM mesuré moteur 1
 int rpm_moteur_2 = 0;                      // RPM mesuré moteur 2
 
@@ -586,25 +589,51 @@ void calculer_rpm() {
     pulseCount2 = 0;
     interrupts();
     
-    // Calcul RPM : (impulsions / encoches_par_tour) * (60000 / deltaTime_ms)
-    rpm_moteur_1 = (pulses1 * 60000) / (PULSES_PER_REV * deltaTime);
-    rpm_moteur_2 = (pulses2 * 60000) / (PULSES_PER_REV * deltaTime);
+    // Calcul RPM : (impulsions / PULSES_PER_REV) * (60000 / deltaTime_ms)
+    // Formule correcte : RPM = (impulsions_par_seconde * 60) / PULSES_PER_REV
+    // impulsions_par_seconde = pulses * (1000 / deltaTime)
+    if (deltaTime > 0) {  // Protection division par zéro
+      rpm_moteur_1 = (pulses1 * 60000) / (PULSES_PER_REV * deltaTime);
+      rpm_moteur_2 = (pulses2 * 60000) / (PULSES_PER_REV * deltaTime);
+    }
     
     lastRPMCalc = currentTime;
+    
+    // Debug : Afficher les valeurs brutes
+    Serial.print("Pulses1: ");
+    Serial.print(pulses1);
+    Serial.print(" Pulses2: ");
+    Serial.print(pulses2);
+    Serial.print(" DeltaTime: ");
+    Serial.print(deltaTime);
+    Serial.print("ms -> RPM1: ");
+    Serial.print(rpm_moteur_1);
+    Serial.print(" RPM2: ");
+    Serial.println(rpm_moteur_2);
   }
 }
 
 
 //========================= Déclaration des interruptions =====================================
 
-// Interruption TCRT5000 moteur 1
+// Interruption TCRT5000 moteur 1 avec anti-rebond
 void IRAM_ATTR compteur_moteur_1() {
-  pulseCount1++;
+  unsigned long currentTime = millis();
+  // Anti-rebond : ignorer les impulsions trop rapprochées
+  if (currentTime - lastPulseTime1 > DEBOUNCE_TIME) {
+    pulseCount1++;
+    lastPulseTime1 = currentTime;
+  }
 }
 
-// Interruption TCRT5000 moteur 2
+// Interruption TCRT5000 moteur 2 avec anti-rebond
 void IRAM_ATTR compteur_moteur_2() {
-  pulseCount2++;
+  unsigned long currentTime = millis();
+  // Anti-rebond : ignorer les impulsions trop rapprochées
+  if (currentTime - lastPulseTime2 > DEBOUNCE_TIME) {
+    pulseCount2++;
+    lastPulseTime2 = currentTime;
+  }
 }
 
 // Interruption de démarrage des moteurs
