@@ -176,7 +176,7 @@ const int LPWM_2 = 19;          // GPIO19 pour sens de rotation à gauche moteur
 // Pins des capteurs TCRT5000 pour mesure de vitesse
 const int TCRT_MOTEUR_1 = 5;    // GPIO5 pour capteur vitesse moteur 1
 const int TCRT_MOTEUR_2 = 13;   // GPIO13 pour capteur vitesse moteur 2
-const int PULSES_PER_REV = 1;   // Nombre de trous/encoches par tour (à ajuster selon votre disque)
+const int PULSES_PER_REV = 4;   // Nombre de trous/encoches par tour (à ajuster selon votre disque)
 
 // PWM Channels
 #define RPWM1_CHANNEL 0
@@ -198,7 +198,7 @@ volatile unsigned long lastPulseTime1 = 0; // Temps de la dernière impulsion mo
 volatile unsigned long lastPulseTime2 = 0; // Temps de la dernière impulsion moteur 2
 unsigned long lastRPMCalc = 0;             // Dernier calcul de RPM
 const unsigned long RPM_CALC_INTERVAL = 500; // Intervalle de calcul RPM en ms. En augmentant, on améliore la précision mais on réduit la réactivité
-const unsigned long DEBOUNCE_TIME = 50;     // Anti-rebond 50ms (augmenté pour éliminer les doubles détections)
+const unsigned long DEBOUNCE_TIME = 20;     // Anti-rebond 50ms (augmenté pour éliminer les doubles détections)
 volatile int rpm_moteur_1 = 0;             // RPM mesuré moteur 1 (volatile pour accès multi-thread)
 volatile int rpm_moteur_2 = 0;             // RPM mesuré moteur 2 (volatile pour accès multi-thread)
 
