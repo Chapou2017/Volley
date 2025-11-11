@@ -261,7 +261,7 @@ const float ACS712_SENSITIVITY = 0.100;  // 100 mV/A pour le modèle 20A
 const float ACS712_ZERO_CURRENT = 1.43;   // Point milieu à 1.65V pour alimentation 3.3V (3.3V/2) pour un ESP32, 1.43V sur le GPIO35 après calibration
 
 // Paramètres de filtrage pour stabiliser la mesure
-const int NB_ECHANTILLONS = 100;  // Nombre d'échantillons pour la moyenne
+const int NB_ECHANTILLONS = 20;   // RÉDUIT de 100 à 20 pour accélérer le loop
 const float ALPHA_FILTRE = 0.2;   // Coefficient du filtre passe-bas (0.1 à 0.3 recommandé)
 
 //========================= Déclaration des fonctions =====================================
@@ -589,11 +589,11 @@ void calculer_rpm() {
     pulseCount2 = 0;
     interrupts();
     
-    // CORRECTION : Utiliser RPM_CALC_INTERVAL fixe au lieu de deltaTime variable
-    // Calcul RPM basé sur l'intervalle fixe défini (pas le deltaTime réel qui varie)
-    if (pulses1 > 0 || pulses2 > 0) {  // Calculer seulement s'il y a des impulsions
-      rpm_moteur_1 = (pulses1 * 60000) / (PULSES_PER_REV * RPM_CALC_INTERVAL);
-      rpm_moteur_2 = (pulses2 * 60000) / (PULSES_PER_REV * RPM_CALC_INTERVAL);
+    // CORRECTION : Utiliser deltaTime RÉEL pour un calcul précis
+    // Calcul RPM basé sur le temps réel écoulé (plus précis)
+    if (deltaTime > 0 && (pulses1 > 0 || pulses2 > 0)) {
+      rpm_moteur_1 = (pulses1 * 60000) / (PULSES_PER_REV * deltaTime);
+      rpm_moteur_2 = (pulses2 * 60000) / (PULSES_PER_REV * deltaTime);
     } else {
       // Pas d'impulsions = moteur arrêté
       rpm_moteur_1 = 0;
@@ -607,9 +607,7 @@ void calculer_rpm() {
     Serial.print(pulses1);
     Serial.print(" DeltaTime_reel: ");
     Serial.print(deltaTime);
-    Serial.print("ms (theorique:");
-    Serial.print(RPM_CALC_INTERVAL);
-    Serial.print("ms) -> RPM1: ");
+    Serial.print("ms -> RPM1: ");
     Serial.println(rpm_moteur_1);
   }
 }
