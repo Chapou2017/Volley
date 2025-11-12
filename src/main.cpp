@@ -197,7 +197,7 @@ volatile unsigned long pulseCount2 = 0;    // Compteur d'impulsions moteur 2
 volatile unsigned long lastPulseTime1 = 0; // Temps de la dernière impulsion moteur 1
 volatile unsigned long lastPulseTime2 = 0; // Temps de la dernière impulsion moteur 2
 unsigned long lastRPMCalc = 0;             // Dernier calcul de RPM
-const unsigned long RPM_CALC_INTERVAL = 500; // Intervalle de calcul RPM en ms. En augmentant, on améliore la précision mais on réduit la réactivité
+const unsigned long RPM_CALC_INTERVAL = 1000; // Intervalle de calcul RPM en ms. En augmentant, on améliore la précision mais on réduit la réactivité
 const unsigned long DEBOUNCE_TIME = 20;     // Anti-rebond 50ms (augmenté pour éliminer les doubles détections)
 volatile int rpm_moteur_1 = 0;             // RPM mesuré moteur 1 (volatile pour accès multi-thread)
 volatile int rpm_moteur_2 = 0;             // RPM mesuré moteur 2 (volatile pour accès multi-thread)
@@ -213,7 +213,7 @@ const int spinMin = -50;
 
 // Variables pour la gestion anti-rebond du clavier
 unsigned long lastKeyPressTime = 0;
-const unsigned long keyDebounceDelay = 400;  // Délai anti-rebond en millisecondes
+const unsigned long keyDebounceDelay = 200;  // Délai anti-rebond en millisecondes
 char lastKey = 0;  // Dernière touche pressée
 
 // Variables dynamiques - affichage sur TFT
