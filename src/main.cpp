@@ -173,10 +173,10 @@ const int LPWM_1 = 33;          // GPIO33 pour sens de rotation à gauche moteur
 const int RPWM_2 = 32;          // GPIO32 pour sens de rotation à droite moteur 2
 const int LPWM_2 = 19;          // GPIO19 pour sens de rotation à gauche moteur 2
 
-// Pins des capteurs TCRT5000 pour mesure de vitesse
-const int TCRT_MOTEUR_1 = 5;    // GPIO5 pour capteur vitesse moteur 1
-const int TCRT_MOTEUR_2 = 13;   // GPIO13 pour capteur vitesse moteur 2
-const int PULSES_PER_REV = 4;   // Nombre de trous/encoches par tour (à ajuster selon votre disque)
+// Pins des capteurs Reed Switch (RS 268-4855) pour mesure de vitesse
+const int REED_MOTEUR_1 = 5;    // GPIO5 pour capteur Reed Switch moteur 1
+const int REED_MOTEUR_2 = 13;   // GPIO13 pour capteur Reed Switch moteur 2
+const int PULSES_PER_REV = 4;   // Nombre de cibles magnétiques par tour (4 aimants sur le disque)
 
 // PWM Channels
 #define RPWM1_CHANNEL 0
@@ -191,14 +191,14 @@ bool lastMotorState = false;         // Pour détecter les changements d'état
 volatile bool ledState = false;
 volatile unsigned long lastInterruptTime = 0;
 
-// Variables pour la mesure de vitesse (TCRT5000)
+// Variables pour la mesure de vitesse (Reed Switch RS 268-4855)
 volatile unsigned long pulseCount1 = 0;    // Compteur d'impulsions moteur 1
 volatile unsigned long pulseCount2 = 0;    // Compteur d'impulsions moteur 2
 volatile unsigned long lastPulseTime1 = 0; // Temps de la dernière impulsion moteur 1
 volatile unsigned long lastPulseTime2 = 0; // Temps de la dernière impulsion moteur 2
 unsigned long lastRPMCalc = 0;             // Dernier calcul de RPM
 const unsigned long RPM_CALC_INTERVAL = 1000; // Intervalle de calcul RPM en ms. En augmentant, on améliore la précision mais on réduit la réactivité
-const unsigned long DEBOUNCE_TIME = 20;     // Anti-rebond 50ms (augmenté pour éliminer les doubles détections)
+const unsigned long DEBOUNCE_TIME = 10;     // Anti-rebond 10ms (Reed Switch : rebond mécanique ~1-2ms, sûr jusqu'à 1500 RPM avec 4 cibles)
 volatile int rpm_moteur_1 = 0;             // RPM mesuré moteur 1 (volatile pour accès multi-thread)
 volatile int rpm_moteur_2 = 0;             // RPM mesuré moteur 2 (volatile pour accès multi-thread)
 
@@ -643,20 +643,20 @@ void taskCalculRPM(void *parameter) {
 
 //========================= Déclaration des interruptions =====================================
 
-// Interruption TCRT5000 moteur 1 avec anti-rebond
+// Interruption Reed Switch moteur 1 avec anti-rebond
 void IRAM_ATTR compteur_moteur_1() {
   unsigned long currentTime = millis();
-  // Anti-rebond : ignorer les impulsions trop rapprochées
+  // Anti-rebond : ignorer les impulsions trop rapprochées (10ms sûr jusqu'à 1500 RPM)
   if (currentTime - lastPulseTime1 > DEBOUNCE_TIME) {
     pulseCount1++;
     lastPulseTime1 = currentTime;
   }
 }
 
-// Interruption TCRT5000 moteur 2 avec anti-rebond
+// Interruption Reed Switch moteur 2 avec anti-rebond
 void IRAM_ATTR compteur_moteur_2() {
   unsigned long currentTime = millis();
-  // Anti-rebond : ignorer les impulsions trop rapprochées
+  // Anti-rebond : ignorer les impulsions trop rapprochées (10ms sûr jusqu'à 1500 RPM)
   if (currentTime - lastPulseTime2 > DEBOUNCE_TIME) {
     pulseCount2++;
     lastPulseTime2 = currentTime;
@@ -727,9 +727,9 @@ void setup() {
   pinMode(pinBoutonPlus, INPUT_PULLUP);        // Résistance de pull-up activée
   pinMode(pinBoutonMoins, INPUT_PULLUP);       // Résistance de pull-up activée
 
-  // Configuration des capteurs TCRT5000
-  pinMode(TCRT_MOTEUR_1, INPUT_PULLUP);        // Résistance de pull-up activée
-  pinMode(TCRT_MOTEUR_2, INPUT_PULLUP);        // Résistance de pull-up activée
+  // Configuration des capteurs Reed Switch (RS 268-4855)
+  pinMode(REED_MOTEUR_1, INPUT_PULLUP);        // Résistance de pull-up activée (Reed Switch = contact passif 2 fils)
+  pinMode(REED_MOTEUR_2, INPUT_PULLUP);        // Résistance de pull-up activée
 
   // Initialisation du clavier numérique
   if (clavier.begin() == false){
@@ -751,9 +751,9 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(pinBoutonPlus), augmenterSpin, FALLING);
   attachInterrupt(digitalPinToInterrupt(pinBoutonMoins), diminuerSpin, FALLING);
   
-  // Attachement des interruptions TCRT5000 (front descendant = passage du noir au blanc)
-  attachInterrupt(digitalPinToInterrupt(TCRT_MOTEUR_1), compteur_moteur_1, FALLING);
-  attachInterrupt(digitalPinToInterrupt(TCRT_MOTEUR_2), compteur_moteur_2, FALLING);
+  // Attachement des interruptions Reed Switch (front descendant = aimant détecté, contact fermé)
+  attachInterrupt(digitalPinToInterrupt(REED_MOTEUR_1), compteur_moteur_1, FALLING);
+  attachInterrupt(digitalPinToInterrupt(REED_MOTEUR_2), compteur_moteur_2, FALLING);
   
   // Création de la tâche dédiée au calcul RPM sur Core 0
   xTaskCreatePinnedToCore(
