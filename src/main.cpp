@@ -219,6 +219,7 @@ char lastKey = 0;  // Dernière touche pressée
 // Variables dynamiques - affichage sur TFT
 int vitesse = 0;
 int spin = 0;
+int rpm_theorique = 0;  // NOUVEAU : RPM théorique calculé
 float tension1 = 0.0;
 float tension2 = 0.0;
 float courant1 = 0.0;
@@ -229,6 +230,7 @@ int regime2 = 0;
 // Variables pour détecter les changements d'affichage
 int vitesse_prev = -1;
 int spin_prev = -999;
+int rpm_theorique_prev = -1;  // NOUVEAU : pour détecter changement RPM théorique
 float tension_moteur_1_prev = -1.0;
 float tension_moteur_2_prev = -1.0;
 float courant1_prev = -1.0;
@@ -366,41 +368,64 @@ void drawThickRect(int x, int y, int w, int h, int thickness, uint16_t color) {
   }
 }
 
+// NOUVEAU : Fonction d'affichage de la vitesse ballon (rectangle gauche)
 void updateVitesse() {
   // Ne mettre à jour que si la valeur a changé
   if (vitesse != vitesse_prev) {
-    tft.setFreeFont(&FreeSans12pt7b);
-    tft.setCursor(20, 80);
-    tft.println("Vitesse de ballon");
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setCursor(20, 75);
+    tft.println("Vitesse ballon");
     
     tft.setFreeFont(&FreeSans24pt7b);
     tft.setTextColor(TFT_YELLOW, TFT_BLACK);
-    tft.fillRect(30, 110, 100, 50, TFT_BLACK);
-    tft.setCursor(30, 150);
+    tft.fillRect(5, 100, 145, 50, TFT_BLACK);
+    tft.setCursor(15, 140);
     tft.printf("%3d", vitesse);
-    tft.setFreeFont(&FreeSans18pt7b);
+    tft.setFreeFont(&FreeSans9pt7b);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.setCursor(145, 150);
+    tft.setCursor(95, 140);
     tft.println("km/h");
     vitesse_prev = vitesse;
   }
 }
 
+// NOUVEAU : Fonction d'affichage du RPM théorique (rectangle central)
+void updateRPMTheorique() {
+  // Ne mettre à jour que si la valeur a changé
+  if (rpm_theorique != rpm_theorique_prev) {
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setCursor(185, 75);
+    tft.println("RPM cible");
+    
+    tft.setFreeFont(&FreeSans24pt7b);
+    tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    tft.fillRect(165, 100, 145, 50, TFT_BLACK);
+    tft.setCursor(168, 140);
+    tft.printf("%4d", rpm_theorique);
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.setCursor(275, 140);
+    tft.println("tr/m");
+    rpm_theorique_prev = rpm_theorique;
+  }
+}
+
+// MODIFIÉ : Fonction d'affichage du spin (rectangle droit)
 void updateSpin() {
   // Ne mettre à jour que si la valeur a changé
   if (spin != spin_prev) {
-    tft.setFreeFont(&FreeSans12pt7b);
-    tft.setCursor(300, 80);
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setCursor(355, 75);
     tft.println("Effet (spin)");
 
     tft.setFreeFont(&FreeSans24pt7b);
     tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    tft.fillRect(320, 110, 90, 50, TFT_BLACK);
-    tft.setCursor(320, 150);
-    tft.printf("%2d", spin);
-    tft.setFreeFont(&FreeSans18pt7b);
+    tft.fillRect(325, 100, 150, 50, TFT_BLACK);
+    tft.setCursor(335, 140);
+    tft.printf("%3d", spin);
+    tft.setFreeFont(&FreeSans12pt7b);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.setCursor(420, 150);
+    tft.setCursor(420, 140);
     tft.println("%");
     spin_prev = spin;
   }
@@ -774,21 +799,24 @@ void setup() {
   tft.fillScreen(TFT_BLACK);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
-  // Dessin des rectangles (X, Y, largeur, hauteur, épaisseur)
-  drawThickRect(0, 50, 239, 130, 3, TFT_YELLOW); // Rectangle "Vitesse ballon"
-  drawThickRect(241, 50, 238, 130, 3, TFT_GREEN); // Rectangle "% Spin"
+  // MODIFIÉ : Dessin des rectangles en 3 parties (écran 480px de large)
+  drawThickRect(0, 50, 155, 130, 3, TFT_YELLOW);   // Rectangle "Vitesse ballon" (gauche)
+  drawThickRect(161, 50, 152, 130, 3, TFT_CYAN);   // Rectangle "RPM cible" (centre) - NOUVEAU
+  drawThickRect(319, 50, 161, 130, 3, TFT_GREEN);  // Rectangle "Effet (spin)" (droite)
+  
   drawThickRect(0, 182, 118, 132, 2, TFT_LIGHTGREY); // Rectangle "Tension moteur 1"
   drawThickRect(120, 182, 119, 132, 2, TFT_LIGHTGREY); // Rectangle "Courant moteur 1"
   drawThickRect(241, 182, 119, 132, 2, TFT_LIGHTGREY); // Rectangle "Tension moteur 2"
   drawThickRect(362, 182, 118, 132, 2, TFT_LIGHTGREY); // Rectangle "Courant moteur 2"
 
-  // Titre
+  // MODIFIÉ : Titre pour les valeurs cibles
   tft.setFreeFont(&FreeSans12pt7b);
-  tft.setCursor(155, 30);
-  tft.println("Reglages actuels");
+  tft.setCursor(160, 30);
+  tft.println("Valeurs cibles");
 
   // Affichage initial
   updateVitesse();
+  updateRPMTheorique();  // NOUVEAU
   updateSpin();
   updateTension1();
   updateCourant1();
@@ -902,6 +930,7 @@ void loop() {
   // Mise à jour des variables de fonctionnement avec valeurs mesurées
   vitesse = VITESSE;
   spin = spinPercent;
+  rpm_theorique = rpm_input;  // NOUVEAU : RPM théorique pour affichage
   tension1 = tension_moteur_1;
   tension2 = tension_moteur_2;
   courant1 = courant1;
@@ -911,6 +940,7 @@ void loop() {
 
   // Mise à jour de l'affichage TFT
   updateVitesse();
+  updateRPMTheorique();  // NOUVEAU
   updateSpin();
   updateTension1();
   updateCourant1();
@@ -920,4 +950,3 @@ void loop() {
   // Mise à jour des afficheurs TM1637 pour les régimes
   afficher_rpm_tm1637();
 }
-
