@@ -398,15 +398,18 @@ void updateVitesse() {
   // Ne mettre à jour que si la valeur a changé
   if (vitesse != vitesse_prev) {
     tft.setFreeFont(&FreeSans12pt7b);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.setCursor(5, 70);
+    tft.setTextColor(TFT_YELLOW, TFT_BLACK);
+    tft.setCursor(15, 60);
     tft.println("Vitesse ballon");
     
     tft.setFreeFont(&FreeSans24pt7b);
     tft.setTextColor(TFT_YELLOW, TFT_BLACK);
-    tft.fillRect(5, 75, 150, 35, TFT_BLACK);
-    tft.setCursor(15, 105);
-    tft.printf("%3d km/h", vitesse);
+    tft.fillRect(5, 70, 150, 40, TFT_BLACK);
+    tft.setCursor(25, 105);
+    tft.printf("%3d", vitesse);
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setCursor(100, 105);
+    tft.println("km/h");
     tft.setTextColor(TFT_WHITE, TFT_BLACK);  // restaurer la couleur de police par défaut
     vitesse_prev = vitesse;
   }
@@ -417,7 +420,7 @@ void updateRPMTheorique() {
   // Ne mettre à jour que si la valeur a changé
   if (rpm_theorique != rpm_theorique_prev) {
     tft.setFreeFont(&FreeSans12pt7b);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.setTextColor(TFT_CYAN, TFT_BLACK);
     tft.setCursor(70, 140);
     tft.println("RPM cible moteurs");
     
@@ -425,7 +428,10 @@ void updateRPMTheorique() {
     tft.setTextColor(TFT_CYAN, TFT_BLACK);
     tft.fillRect(80, 145, 160, 35, TFT_BLACK);
     tft.setCursor(100, 175);
-    tft.printf("%4d tr/m", rpm_theorique);
+    tft.printf("%4d", rpm_theorique);
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setCursor(207, 175);
+    tft.println("tr/min");
     tft.setTextColor(TFT_WHITE, TFT_BLACK);  // restaurer la couleur de police par défaut
     rpm_theorique_prev = rpm_theorique;
   }
@@ -436,15 +442,18 @@ void updateSpin() {
   // Ne mettre à jour que si la valeur a changé
   if (spin != spin_prev) {
     tft.setFreeFont(&FreeSans12pt7b);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.setCursor(170, 70);
+    tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    tft.setCursor(220, 60);
     tft.println("Spin");
     
     tft.setFreeFont(&FreeSans24pt7b);
     tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    tft.fillRect(165, 75, 150, 35, TFT_BLACK);
-    tft.setCursor(185, 105);
-    tft.printf("%3d %%", spin);
+    tft.fillRect(165, 70, 150, 40, TFT_BLACK);
+    tft.setCursor(205, 105);
+    tft.printf("%3d", spin);
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setCursor(280, 105);
+    tft.println("%");
     tft.setTextColor(TFT_WHITE, TFT_BLACK);  // restaurer la couleur de police par défaut
     spin_prev = spin;
   }
@@ -846,10 +855,10 @@ void setup() {
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
   // Titre avec fond bordeaux pour les valeurs cibles
-  tft.fillRect(0, 0, 320, 35, TFT_MAROON);
-  tft.setFreeFont(&FreeSans18pt7b);
-  tft.setTextColor(TFT_WHITE, TFT_MAROON);
-  tft.setCursor(20, 25);
+  tft.fillRect(0, 0, 320, 35, TFT_BLUE);
+  tft.setFreeFont(&FreeSans12pt7b);
+  tft.setTextColor(TFT_WHITE, TFT_BLUE);
+  tft.setCursor(60, 25);
   tft.println("VALEURS CIBLES");
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
@@ -857,10 +866,10 @@ void setup() {
   tft.drawFastHLine(0, 115, 320, TFT_WHITE);
   
   // Titre pour les mesures
-  tft.fillRect(0, 190, 320, 30, TFT_DARKGREY);
-  tft.setFreeFont(&FreeSans18pt7b);
-  tft.setTextColor(TFT_WHITE, TFT_DARKGREY);
-  tft.setCursor(10, 215);
+  tft.fillRect(0, 190, 320, 30, TFT_DARKGREEN);
+  tft.setFreeFont(&FreeSans12pt7b);
+  tft.setTextColor(TFT_WHITE, TFT_DARKGREEN);
+  tft.setCursor(41, 213);
   tft.println("MESURES MOTEURS");
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   
