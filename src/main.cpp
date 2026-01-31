@@ -419,19 +419,19 @@ void updateVitesse() {
 void updateRPMTheorique() {
   // Ne mettre à jour que si la valeur a changé
   if (rpm_theorique != rpm_theorique_prev) {
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    tft.setCursor(70, 135);
+    tft.println("Regime des moteurs");
+    
     tft.setFreeFont(&FreeSans12pt7b);
     tft.setTextColor(TFT_CYAN, TFT_BLACK);
-    tft.setCursor(70, 140);
-    tft.println("RPM cible moteurs");
-    
-    tft.setFreeFont(&FreeSans18pt7b);
-    tft.setTextColor(TFT_CYAN, TFT_BLACK);
-    tft.fillRect(80, 145, 160, 35, TFT_BLACK);
-    tft.setCursor(100, 175);
+    tft.fillRect(80, 140, 160, 30, TFT_BLACK);
+    tft.setCursor(100, 165);
     tft.printf("%4d", rpm_theorique);
     tft.setFreeFont(&FreeSans9pt7b);
-    tft.setCursor(207, 175);
-    tft.println("tr/min");
+    tft.setCursor(190, 165);
+    tft.println("rpm");
     tft.setTextColor(TFT_WHITE, TFT_BLACK);  // restaurer la couleur de police par défaut
     rpm_theorique_prev = rpm_theorique;
   }
@@ -463,15 +463,19 @@ void updateSpin() {
 void updateTension1() {
   // Ne mettre à jour que si la valeur a changé (avec seuil de 0.1V pour éviter les micro-variations)
   if (abs(tension_moteur_1 - tension_moteur_1_prev) > 0.05) {
-    tft.setFreeFont(&FreeSans12pt7b);
-    tft.setCursor(10, 245);
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setTextColor(TFT_DARKCYAN, TFT_BLACK);
+    tft.setCursor(10, 228);
     tft.println("Moteur 1");
     
     tft.setFreeFont(&FreeSans18pt7b);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.fillRect(5, 250, 150, 30, TFT_BLACK);
-    tft.setCursor(10, 275);
-    tft.printf("U:%.1fV", tension_moteur_1);
+    tft.setTextColor(TFT_DARKCYAN, TFT_BLACK);
+    tft.fillRect(5, 240, 150, 30, TFT_BLACK);
+    tft.setCursor(10, 265);
+    tft.printf("U: %.1f", tension_moteur_1);
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setCursor(125, 265);
+    tft.println("V");
     tft.setTextColor(TFT_WHITE, TFT_BLACK);  // restaurer la couleur de police par défaut
     tension_moteur_1_prev = tension_moteur_1;
   }
@@ -482,10 +486,13 @@ void updateCourant1() {
   // Ne mettre à jour que si la valeur a changé
   if (abs(courant1 - courant1_prev) > 0.05) {
     tft.setFreeFont(&FreeSans18pt7b);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.fillRect(165, 250, 150, 30, TFT_BLACK);
-    tft.setCursor(170, 275);
-    tft.printf("I:%.1fA", courant1);
+    tft.setTextColor(TFT_DARKCYAN, TFT_BLACK);
+    tft.fillRect(165, 240, 150, 30, TFT_BLACK);
+    tft.setCursor(175, 265);
+    tft.printf("I: %.1f", courant1);
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setCursor(280, 265);
+    tft.println("A");
     tft.setTextColor(TFT_WHITE, TFT_BLACK);  // restaurer la couleur de police par défaut
     courant1_prev = courant1;
   }
@@ -495,15 +502,18 @@ void updateCourant1() {
 void updateTension2() {
   // Ne mettre à jour que si la valeur a changé
   if (abs(tension_moteur_2 - tension_moteur_2_prev) > 0.05) {
-    tft.setFreeFont(&FreeSans12pt7b);
-    tft.setCursor(10, 315);
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setTextColor(TFT_DARKCYAN, TFT_BLACK);
+    tft.setCursor(10, 298);
     tft.println("Moteur 2");
     
     tft.setFreeFont(&FreeSans18pt7b);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.fillRect(5, 320, 150, 30, TFT_BLACK);
-    tft.setCursor(10, 345);
-    tft.printf("U:%.1fV", tension_moteur_2);
+    tft.fillRect(5, 310, 150, 30, TFT_BLACK);
+    tft.setCursor(10, 335);
+    tft.printf("U: %.1f", tension_moteur_2);
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setCursor(125, 335);
+    tft.println("V");
     tft.setTextColor(TFT_WHITE, TFT_BLACK);  // restaurer la couleur de police par défaut
     tension_moteur_2_prev = tension_moteur_2;
   }
@@ -514,10 +524,13 @@ void updateCourant2() {
   // Ne mettre à jour que si la valeur a changé
   if (abs(courant2 - courant2_prev) > 0.05) {
     tft.setFreeFont(&FreeSans18pt7b);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.fillRect(165, 320, 150, 30, TFT_BLACK);
-    tft.setCursor(170, 345);
-    tft.printf("I:%.1fA", courant2);
+    tft.setTextColor(TFT_DARKCYAN, TFT_BLACK);
+    tft.fillRect(155, 310, 150, 30, TFT_BLACK);
+    tft.setCursor(175, 335);
+    tft.printf("I: %.1f", courant2);
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setCursor(280, 335);
+    tft.println("A");
     tft.setTextColor(TFT_WHITE, TFT_BLACK);  // restaurer la couleur de police par défaut
     courant2_prev = courant2;
   }
@@ -526,18 +539,29 @@ void updateCourant2() {
 // NOUVEAU : Affichage RPM mesurés (24pt) + Spin réel (18pt) en mode portrait
 void updateRPMMesures() {
   if (abs(regime1 - regime1_prev) > 10 || abs(regime2 - regime2_prev) > 10) {
-    tft.setFreeFont(&FreeSans12pt7b);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.setCursor(90, 385);
-    tft.println("RPM mesures");
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    tft.setCursor(8, 370);
+    tft.println("Regime des moteurs");
     
-    tft.setFreeFont(&FreeSans24pt7b);
-    tft.setTextColor(TFT_ORANGE, TFT_BLACK);
-    tft.fillRect(5, 390, 310, 35, TFT_BLACK);
-    tft.setCursor(10, 420);
-    tft.printf("M1:%4d", regime1);
-    tft.setCursor(170, 420);
-    tft.printf("M2:%4d", regime2);
+    tft.setFreeFont(&FreeSans12pt7b);
+    tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    tft.fillRect(0, 380, 179, 100, TFT_BLACK);
+    tft.setCursor(10, 415);
+    tft.printf("M1 : ");
+    tft.setFreeFont(&FreeSans18pt7b);
+    tft.printf("%4d", regime1);
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setCursor(150, 415);
+    tft.println("rpm");
+    tft.setFreeFont(&FreeSans12pt7b);
+    tft.setCursor(10, 465);
+    tft.printf("M2 : ");
+    tft.setFreeFont(&FreeSans18pt7b);
+    tft.printf("%4d", regime2);
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setCursor(150, 465);
+    tft.println("rpm");
     
     regime1_prev = regime1;
     regime2_prev = regime2;
@@ -545,11 +569,19 @@ void updateRPMMesures() {
   
   // Affichage spin réel (calculé à partir des RPM mesurés)
   if (abs(spin_reel - spin_reel_prev) > 0.5) {
-    tft.setFreeFont(&FreeSans18pt7b);
-    tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
-    tft.fillRect(5, 430, 310, 30, TFT_BLACK);
-    tft.setCursor(40, 455);
-    tft.printf("Spin reel:%.1f%%", spin_reel);
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    tft.setCursor(215, 370);
+    tft.println("SPIN reel");
+
+    tft.setFreeFont(&FreeSans24pt7b);
+    tft.fillRect(200, 380, 120, 100, TFT_BLACK);
+    tft.setCursor(200, 445);
+    tft.printf("%3d", spin_reel);
+    tft.setFreeFont(&FreeSans9pt7b);
+    tft.setCursor(280, 445);
+    tft.println("%");
+
     spin_reel_prev = spin_reel;
   }
 }
@@ -855,27 +887,28 @@ void setup() {
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
   // Titre avec fond bordeaux pour les valeurs cibles
-  tft.fillRect(0, 0, 320, 35, TFT_BLUE);
+  tft.fillRect(0, 0, 320, 33, TFT_DARKGREY);
   tft.setFreeFont(&FreeSans12pt7b);
-  tft.setTextColor(TFT_WHITE, TFT_BLUE);
+  tft.setTextColor(TFT_WHITE, TFT_DARKGREY);
   tft.setCursor(60, 25);
   tft.println("VALEURS CIBLES");
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
   // Séparateur
-  tft.drawFastHLine(0, 115, 320, TFT_WHITE);
+  tft.drawFastHLine(0, 115, 320, TFT_DARKGREY);
   
   // Titre pour les mesures
-  tft.fillRect(0, 190, 320, 30, TFT_DARKGREEN);
+  tft.fillRect(0, 175, 320, 30, TFT_DARKGREY);
   tft.setFreeFont(&FreeSans12pt7b);
-  tft.setTextColor(TFT_WHITE, TFT_DARKGREEN);
-  tft.setCursor(41, 213);
+  tft.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  tft.setCursor(39, 198);
   tft.println("MESURES MOTEURS");
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   
   // Séparateurs mesures
-  tft.drawFastHLine(0, 285, 320, TFT_DARKGREY);
-  tft.drawFastHLine(0, 355, 320, TFT_DARKGREY);
+  tft.drawFastHLine(0, 275, 320, TFT_DARKGREY);
+  tft.drawFastHLine(0, 345, 320, TFT_DARKGREY);
+  tft.drawFastVLine(190, 360, 120, TFT_DARKGREY);
   
   // Affichage initial en mode portrait
   updateVitesse();
