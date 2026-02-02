@@ -574,14 +574,32 @@ void updateRPMMesures() {
     tft.setCursor(215, 370);
     tft.println("SPIN reel");
 
+    // Déterminer si le spin dépasse la valeur max autorisée
+    float spin_affiche = spin_reel;
+    bool spin_depasse = false;
+    
+    if (abs(spin_reel) > spinMax) {
+      spin_affiche = (spin_reel > 0) ? spinMax : -spinMax;  // Capper à ±spinMax
+      spin_depasse = true;
+    }
+
     tft.setFreeFont(&FreeSans24pt7b);
     tft.fillRect(200, 380, 120, 100, TFT_BLACK);
+    
+    // Afficher en rouge si dépassement, sinon en vert
+    if (spin_depasse) {
+      tft.setTextColor(TFT_RED, TFT_BLACK);
+    } else {
+      tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    }
+    
     tft.setCursor(200, 445);
-    tft.printf("%3d", spin_reel);
+    tft.printf("%3.0f", spin_affiche);  // %.0f pour arrondir sans décimales
     tft.setFreeFont(&FreeSans9pt7b);
     tft.setCursor(280, 445);
     tft.println("%");
-
+    
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);  // Restaurer couleur par défaut
     spin_reel_prev = spin_reel;
   }
 }
@@ -712,7 +730,8 @@ void calculer_rpm() {
     // Calcul RPM basé sur le temps réel écoulé
     if (deltaTime > 0) {
       // Moteur 1
-      if (pulses1 > 0) {
+      // MODIFIÉ : Seuil minimum de 2 pulses pour éviter les faux positifs à l'arrêt
+      if (pulses1 >= 2) {
         rpm_moteur_1 = (pulses1 * 60000) / (PULSES_PER_REV * deltaTime);
         lastValidRPMTime1 = currentTime;  // Mise à jour du dernier moment valide
       } else if (currentTime - lastValidRPMTime1 > RPM_TIMEOUT) {
@@ -722,7 +741,8 @@ void calculer_rpm() {
       // Sinon, on garde la dernière valeur RPM (pas de mise à jour)
       
       // Moteur 2
-      if (pulses2 > 0) {
+      // MODIFIÉ : Seuil minimum de 2 pulses pour éviter les faux positifs à l'arrêt
+      if (pulses2 >= 2) {
         rpm_moteur_2 = (pulses2 * 60000) / (PULSES_PER_REV * deltaTime);
         lastValidRPMTime2 = currentTime;
       } else if (currentTime - lastValidRPMTime2 > RPM_TIMEOUT) {
@@ -1030,12 +1050,26 @@ void loop() {
   // calculer_rpm();  // SUPPRIMÉ : maintenant géré par la tâche sur Core 0
 
   // Calcul du spin réel à partir des RPM mesurés (NOUVEAU)
-  int rpm_moyen = (rpm_moteur_1 + rpm_moteur_2) / 2;
+  // MODIFIÉ : Cast en float pour éviter les débordements et capper à ±100%
+  float rpm_moyen = (rpm_moteur_1 + rpm_moteur_2) / 2.0;
   if (rpm_moyen > 50) {  // Évite division par zéro et calcul à très faible vitesse
-    int spin_reel_rpm = rpm_moteur_1 - rpm_moteur_2;
+    float spin_reel_rpm = rpm_moteur_1 - rpm_moteur_2;
     spin_reel = (spin_reel_rpm * 100.0) / rpm_moyen;
+    // Capper le spin réel calculé à ±100% (sécurité pour l'affichage)
+    spin_reel = constrain(spin_reel, -100.0, 100.0);
   } else {
     spin_reel = 0.0;
+  }
+  
+  // Debug : afficher le spin réel calculé
+  if (abs(rpm_moteur_1 - rpm_moteur_2) > 10) {
+    Serial.print("RPM1: ");
+    Serial.print(rpm_moteur_1);
+    Serial.print(" RPM2: ");
+    Serial.print(rpm_moteur_2);
+    Serial.print(" -> Spin réel: ");
+    Serial.print(spin_reel);
+    Serial.println("%");
   }
 
   // Mise à jour des variables de fonctionnement avec valeurs mesurées
