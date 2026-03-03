@@ -656,7 +656,7 @@ void updateCourant2() {
 
 // Affichage RPM mesurés + Spin réel
 void updateRPMMesures() {
-//  if (abs(regime1 - regime1_prev) > 10 || abs(regime2 - regime2_prev) > 10) {
+  if (abs(regime1 - regime1_prev) > 10 || abs(regime2 - regime2_prev) > 10) {
 #if DISPLAY_LANDSCAPE
     // Paysage : zone centre basse x=160..319, y=163..268
     tft.fillRect(183, 210, 170, 110, TFT_BLACK);
@@ -708,7 +708,7 @@ void updateRPMMesures() {
     regime1_prev = regime1;
     regime2_prev = regime2;
 #endif
-//  }
+  }
   
   // Affichage spin réel
   if (abs(spin_reel - spin_reel_prev) > 0.5) {
@@ -991,9 +991,9 @@ void setup() {
   analogReadResolution(12);
 
   // Initialisation de l'écran LCD
-  // lcd.begin (20, 4);     A décommenter sur le montage final
-  // lcd.init();            A décommenter sur le montage final
-  // lcd.backlight();       A décommenter sur le montage final
+  lcd.begin (20, 4);     
+  lcd.init();            
+  lcd.backlight();       
 
   // Initialisation de la liaison I2C
   Wire.begin(); 
