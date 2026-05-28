@@ -175,9 +175,9 @@ const int pinBoutonMoins = 27;  // GPIO27
 const int BUTTON_ON = 26;       // GPIO26
 const int Led_ON = 12;          // GPIO12 pour led état bouton start/stop
 const int RPWM_1 = 16;          // GPIO16 pour sens de rotation à droite moteur 1
-const int LPWM_1 = 33;          // GPIO33 pour sens de rotation à gauche moteur 1
+const int LPWM_1 = 19;          // GPIO33 pour sens de rotation à gauche moteur 1
 const int RPWM_2 = 32;          // GPIO32 pour sens de rotation à droite moteur 2
-const int LPWM_2 = 19;          // GPIO19 pour sens de rotation à gauche moteur 2
+const int LPWM_2 = 33;          // GPIO19 pour sens de rotation à gauche moteur 2
 
 // Pins des capteurs Reed Switch (RS 268-4855) pour mesure de vitesse
 const int REED_MOTEUR_1 = 5;    // GPIO5 pour capteur Reed Switch moteur 1
